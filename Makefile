@@ -1,18 +1,25 @@
-CC = gcc
-CFLAGS = -Wall -g
-INCLUDE_DIR = .
-HEADER_FILE = header_file.h
+all: KASJER PROCEDURA_KLIENT PROCEDURA_FRYZJER serwer_poczekalnia proces_klient proces_fryzjer
 
-# Lista wykonywalnych plików
-EXECUTABLES = KASJER PROCEDURA_FRYZJER PROCEDURA_KLIENT proces_klient proces_fryzjer
+KASJER: KASJER.o operacje_semafor.o
+	gcc -o KASJER KASJER.o operacje_semafor.o
 
-# Reguły główne
-all: $(EXECUTABLES)
+KASJER.o: KASJER.c header_file.h 
+	gcc -c KASJER.c
 
-# Reguła do budowania plików wykonywalnych
-%: %.c $(HEADER_FILE)
-	$(CC) $(CFLAGS) -I$(INCLUDE_DIR) $< -o $@
+operacje_semafor.o: operacje_semafor.c
+	gcc -c operacje_semafor.c
 
-# Czyszczenie plików wykonywalnych
-clean:
-	rm -f $(EXECUTABLES)
+PROCEDURA_KLIENT: PROCEDURA_KLIENT.o operacje_semafor.o
+	gcc -o PROCEDURA_KLIENT PROCEDURA_KLIENT.o operacje_semafor.o
+
+PROCEDURA_FRYZJER: PROCEDURA_FRYZJER.o operacje_semafor.o
+	gcc -o PROCEDURA_FRYZJER PROCEDURA_FRYZJER.o operacje_semafor.o
+
+serwer_poczekalnia: serwer_poczekalnia.o operacje_semafor.o
+	gcc -o serwer_poczekalnia serwer_poczekalnia.o operacje_semafor.o
+
+proces_klient: proces_klient.o operacje_semafor.o
+	gcc -o proces_klient proces_klient.o operacje_semafor.o
+
+proces_fryzjer:	proces_fryzjer.o operacje_semafor.o
+	gcc -o proces_fryzjer proces_fryzjer.o operacje_semafor.o
