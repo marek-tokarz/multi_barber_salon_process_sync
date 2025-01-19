@@ -9,6 +9,18 @@ int main(void)
 
     semID = alokujSemafor(KEY_GLOB_SEM, N, IPC_CREAT | 0666);
 
+    // TWORZENIE kolejki komunikatów do zapytań i 
+    // odpowiedzi z poczekalni
+    int msqid;
+
+    // Tworzenie kolejki komunikatów
+    msqid = msgget(MSG_KEY, IPC_CREAT | 0666);
+    if (msqid == -1)
+    {
+        perror("msgget");
+        exit(1);
+    }
+
     // TWORZENIE procesów: proces_klient
 
     int klient_pid;
@@ -25,8 +37,8 @@ int main(void)
             exit(1);
         case 0: // Proces potomny - uruchomienie nowego programu
             execl("proces_klient", "proces_klient", (char *)NULL);
-            perror("exec: proces_klient failed"); // Jeśli execlp nie zadziałało
-            exit(1);
+            perror("exec: proces_klient failed"); 
+            exit(1); // Jeśli execlp nie zadziałało
         default: // Proces macierzysty
             break;
         }
@@ -39,4 +51,31 @@ int main(void)
     {
         wait(NULL);
     }
+
+    // do zbadania kolejki komunikatów
+    // sleep(30);
+
+    msgctl(msqid, IPC_RMID, NULL);
 }
+
+
+
+/*
+
+PRZEPEŁNIENIE KOLEJKI KOMUNIKATÓW
+
+------ Kolejki komunikatów ---
+klucz      id_msq     właściciel uprawn.    bajtów      komunikatów
+0x00010932 0          marek-toka 666        16384        1024        
+
+//  16384 bajtów podzielone przez 1024 równa się 16.
+
+// 9 KOMUNIKATÓW:
+
+marek-tokarz:~$ ipcs
+
+------ Kolejki komunikatów ---
+klucz      id_msq     właściciel uprawn.    bajtów      komunikatów
+0x00010932 4          marek-toka 666        144          9           
+
+*/

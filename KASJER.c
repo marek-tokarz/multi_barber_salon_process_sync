@@ -33,8 +33,8 @@ int main(void)
         exit(1);
     case 0: // Proces potomny - uruchomienie nowego programu
         execl("./PROCEDURA_KLIENT", "PROCEDURA_KLIENT", (char *)NULL);
-        perror("exec: PROCEDURA_KLIENT failed"); // Jeśli execlp nie zadziałało
-        exit(1);
+        perror("exec: PROCEDURA_KLIENT failed"); 
+        exit(1); // Jeśli execlp nie zadziałało
     default: // Proces macierzysty
         break;
     }
@@ -69,8 +69,8 @@ int main(void)
         exit(1);
     case 0: // Proces potomny - uruchomienie nowego programu
         execl("./PROCEDURA_FRYZJER", "PROCEDURA_FRYZJER", (char *)NULL);
-        perror("exec: PROCEDURA_FRYZJER failed"); // Jeśli execlp nie zadziałało
-        exit(1);
+        perror("exec: PROCEDURA_FRYZJER failed");
+        exit(1); // Jeśli execlp nie zadziałało
     default: // Proces macierzysty
         break;
     }
