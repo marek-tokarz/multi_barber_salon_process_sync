@@ -25,7 +25,7 @@ int main(void)
     // TWORZENIE procesów: proces_klient
 
     int klient_pid;
-    int liczba_klientow = 2;
+    int liczba_klientow = 10;
     int i; // do pętli tworzącej klientów
     
     for (i = 0; i < liczba_klientow; i++)

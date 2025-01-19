@@ -2,28 +2,29 @@
 
 int main()
 {
-    int semID; // numer semafora globalnego
-    int N = 5; // liczba semaforow (na razie wykoryzstywane '0' i '1')
 
-    semID = alokujSemafor(KEY_GLOB_SEM, N, IPC_CREAT | 0666); // dostęp do smeafora
-    SharedMemory *shm;                                        // wskaźnik na pamięć współdzieloną
+    int semID_glob; // numer semafora globalnego
+    int N = 5;      // liczba semaforow (na razie wykorzystywane '0' i '1')
 
-    waitSemafor(semID, 0, SEM_UNDO); // CZEKAJ NA SEMAFORZE 0 - od klientów
+    semID_glob = alokujSemafor(KEY_GLOB_SEM, N, IPC_CREAT | 0666); // dostęp do semafora globalnego
+
+    int semID_shm; // numer semafora pamięci współdzielonej
+    int B = 1;
+    semID_shm = alokujSemafor(KEY_SHM_SEM, B, IPC_CREAT | 0666); // dostęp do semafora pamięci
+    inicjalizujSemafor(semID_shm, 0, 1);
+
+    waitSemafor(semID_glob, 0, SEM_UNDO); // CZEKAJ NA SEMAFORZE 0 - od klientów
     // znak, że wysyłają już komunikaty
 
     printf("PROCEDURA serwer_poczekalnia\n");
 
     // TWORZENIE PAMIĘCI WSPÓŁDZIELONEJ
 
-    int shmid; // nr pamięci współdzielonej - poczekalnia
+    int shmid;         // nr pamięci współdzielonej - poczekalnia
+    SharedMemory *shm; // wskaźnik na pamięć współdzieloną
 
     // Tworzenie segmentu pamięci współdzielonej
-    shmid = shmget(SHM_KEY, sizeof(SharedMemory), IPC_CREAT | 0666);
-    if (shmid == -1)
-    {
-        perror("shmget");
-        exit(1);
-    }
+    shmid = shmget(SHM_KEY, sizeof(SharedMemory), IPC_CREAT | IPC_EXCL | 0666);
 
     // Podpięcie segmentu do przestrzeni adresowej procesu
     shm = (SharedMemory *)shmat(shmid, NULL, 0);
@@ -32,11 +33,6 @@ int main()
         perror("shmat");
         exit(1);
     }
-
-    // Inicjalizacja pamięci współdzielonej (tylko w pierwszym procesie)
-
-    shm->count = 0;
-    memset(shm->pids, 0, sizeof(shm->pids));
 
     int msqid;
     struct msqid_ds buf_info; // do pozyskiwania info o ilości kom. w kolejce
@@ -50,8 +46,8 @@ int main()
         exit(1);
     }
 
-    int odebrane_komunikaty = 0; // DO PRZERWANIA PĘTLI SERWERA
-    int liczba_prob_odbioru = 0; // DO PRZERWANIA PĘTLI SERWERA
+    int odebrane_komunikaty = 0;            // DO PRZERWANIA PĘTLI SERWERA
+    int liczba_prob_odbioru_nieudanego = 0; // DO PRZERWANIA PĘTLI SERWERA
     // liczba prób odbioru ma zapobiec zamknięci pętli gdy akurat kolejka
     // przypadkowo była pusta, bo klienci nic nie wysłali
 
@@ -63,19 +59,20 @@ int main()
 
     if (buf_info.msg_qnum > 1) // sprawdzenie kolejki - w szczególności ilość kom.
     {
-        signalSemafor(semID, 1); // PODNIEŚ SEMAFOR 1 - dla fryzjerów
+        signalSemafor(semID_glob, 1); // PODNIEŚ SEMAFOR 1 - dla fryzjerów
     }
 
-    while (liczba_prob_odbioru < 1000) // pętla odbioru komunikatów
+    while (liczba_prob_odbioru_nieudanego < 1000) // pętla odbioru komunikatów
     {
 
         // flaga IPC_NOWAIT, aby msgrcv nie zatrzymało pętli serwera
         // odbiór kom.: mtype <= -1
         if ((msgrcv(msqid, &buf, sizeof(buf), 1, IPC_NOWAIT)) == -1)
         {
-            // perror("msgrcv - server"); 
-            // zwracało - msgrcv - server: No message of desired type 
-            liczba_prob_odbioru++;
+            // perror("msgrcv - server");
+            // zwracało - msgrcv - server: No message of desired type
+            liczba_prob_odbioru_nieudanego++;
+            usleep(20); // ZWOLNIJ CZEKAJĄC NA KOMUNIKAT W KOLEJCE NIM ZAKOŃCZYSZ PĘTLĘ
             // nie odebrano pożądanego komunikat, nie rób nic, kontynuuj
             // 1000 razy bez pożądanego komuniaktu i pętla się zakończy
         }
@@ -89,10 +86,23 @@ int main()
 
         // printf("Otrzymano PID: %d od nadawcy %d\n", received_pid, sender_pid);
 
-        if (shm->count < MAX_PIDS)
+        waitSemafor(semID_shm, 0, SEM_UNDO); // CZEKAJ NA SEMAFORZE 0
+
+        int jest_w_poczekalni = 0;
+
+        for (int j = 0; j < MAX_PIDS; j++)
         {
-            shm->pids[shm->count] = received_pid;
-            shm->count++;
+            if (shm->pids[j] == received_pid)
+            {
+                jest_w_poczekalni = 1;
+                // printf("już jest w poczekalni\n");
+            }
+        }
+
+        if (shm->counter < MAX_PIDS && jest_w_poczekalni == 0)
+        {
+            shm->pids[shm->counter] = received_pid;
+            shm->counter++;
             buf.mtype = sender_pid;
             buf.status = 1;
 
@@ -107,13 +117,15 @@ int main()
         else // brak miejsca
         {
             buf.mtype = sender_pid;
-            buf.status = 1;
+            buf.status = 0;
             if (msgsnd(msqid, &buf, sizeof(buf), 0) == -1)
             {
                 perror("server - msgsnd - status 0");
                 exit(1);
             }
         }
+
+        signalSemafor(semID_shm, 0);
 
         // na obecną chwilę poczekalnia zapisuje te same PIDy do
         // pamięci współdzielonej
@@ -123,6 +135,7 @@ int main()
 
         usleep(80); // częstotliwość odbierania komunikatów
 
+        /*  RACZEJ ZBĘDNĘ, PĘTLĘ KOŃCZY ZMIENNA: liczba_prob_odbioru_nieudanego
         if (msgctl(msqid, IPC_STAT, &buf_info) == -1) // sprawdzanie stanu kolejki
         {
             perror("msgctl");
@@ -134,12 +147,13 @@ int main()
             // printf("serwer: Kolejka pusta.\n");
             // liczba_prob_odbioru++;
         }
+        */
     }
 
     printf("\nZawartość pamięci współdzielonej:\n");
-    printf("Liczba zapisanych PID-ów: %d\n", shm->count);
+    printf("Liczba zapisanych PID-ów: %d\n", shm->counter);
     printf("Zapisane PID-y:");
-    for (int i = 0; i < shm->count; i++)
+    for (int i = 0; i < shm->counter; i++)
     {
         printf(" %d", (int)shm->pids[i]);
     }
@@ -147,6 +161,7 @@ int main()
 
     msgctl(msqid, IPC_RMID, NULL); // usunięcie kolejki komunikatów
     shmctl(shmid, IPC_RMID, NULL); // usunięcie pamięci współdzielonej
+    zwolnijSemafor(semID_shm, 1); // USUWANIE SEMAFOR pamieci wspóldzielonej
 
     printf("Odebrane komunikaty: %d\n", odebrane_komunikaty);
 }

@@ -17,6 +17,8 @@
 
 #define KEY_GLOB_SEM 1234 // klucz do globalnego semafora chronologii
 
+#define KEY_SHM_SEM 2468 // klucz do semafora dostępu do pamięci dzielonej
+
 #define MSG_KEY 67890  // Klucz do kolejki komunikatów - wysyłanie 
                        // zapytań przez klientów do poczekalni 
                        // i odpowiedź od poczekalni
@@ -27,6 +29,11 @@
                        // miejsce na zapisywanie PIDów klientów, 
                        // ktorzy weszli do poczekalni
 #define MAX_PIDS 6    // Maksymalna liczba PID-ów - pojemność poczekalni
+
+int *pam;
+
+#define zapis pam[MAX_PIDS + 1] // indeks zapis
+#define odczyt pam[MAX_PIDS]    // indeks odczyt
 
 /*
 typedef struct {
@@ -46,7 +53,7 @@ struct msgbuf {
 // Struktura danych do przechowywania PID-ów
 typedef struct {
     pid_t pids[MAX_PIDS]; // tablica PIDów klientów w poczekalni
-    int count; // Licznik zajętych slotów
+    int counter; // Licznik zajętych slotów
 }SharedMemory;
 
 
@@ -57,3 +64,30 @@ void signalSemafor(int semID, int number);
 int zwolnijSemafor(int semID, int number);
 
 #endif // HEADER_FILE
+
+/*
+
+SCHEMAT DZIAŁANIA PAMIĘCI DZIELONEJ
+	
+							    counter 
+tablica	[0]	[1]	[2]	[3]	[4]	[5]	
+    							0	counter = 0: czytający - nie może czytać
+	    1						1	zapis	counter++ 
+	    1	1					2	zapis	counter++
+	    1	1	1				3	zapis	counter++
+	    1	1	1	1			4	zapis	counter++
+	    1	1	1	1	1		5	zapis	counter++
+	    1	1	1	1	1	1	6	zapis   counter++; counter = 6: piszący nie może zapisać
+	
+	
+							    counter 
+tablica	[0]	[1]	[2]	[3]	[4]	[5]	
+							0	counter = 0: czytający - nie może czytać
+	    1						1	zapis
+	    1	1					2	zapis
+	    1	-					1	odczyt z tablica[counter-1]
+	    1	1					2	zapis
+	    1	1	1				3	zapis
+	    1	1	-				2	odczyt z tablica[counter-1]
+
+*/

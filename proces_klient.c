@@ -25,11 +25,9 @@ int main(void)
           exit(1);
      }
 
-     int a = 0; // do przerwania pętli cyklu: praca -> fryzjer -> praca -> praca ...
-
      // PIERWSZY KOMUNIKAT, by można było uruchomić serwer poczekalni
 
-     buf.mtype = 1 ; // Ustawiamy 0 jako typ wiadomości - do serwera
+     buf.mtype = SERVER; // Ustawiamy 1 jako typ wiadomości - do serwera
      buf.pid = my_pid; // treść wiadomości
      // wysłanie komunikatu
      if (msgsnd(msqid, &buf, sizeof(buf), 0) == -1)
@@ -43,13 +41,15 @@ int main(void)
           signalSemafor(semID, 0);
      }
 
+     int a = 0; // do przerwania pętli cyklu: praca -> fryzjer -> praca -> praca ...
+
      while (a < 3)
      {
           // ... kod, który wykonuje się w pętli ...
           // printf("Proces %d wykonuje swoje zadanie...\n", my_pid);
 
           // Wysyłanie PID do kolejki komunikatów
-          buf.mtype = 1 ; // Ustawiamy 1 jako typ wiadomości - do serwera
+          buf.mtype = SERVER; // Ustawiamy 1 jako typ wiadomości - do serwera
           buf.pid = my_pid; // treść wiadomości
           // wysłanie komunikatu
           if (msgsnd(msqid, &buf, sizeof(buf), 0) == -1)
@@ -59,7 +59,7 @@ int main(void)
           }
           else
           {
-               printf("Proces %d wysłał swój PID do kolejki.\n", my_pid);
+               // printf("Proces %d wysłał swój PID do kolejki.\n", my_pid);
           }
 
           usleep(100); // częstotliwość wysyłania komunikatów
@@ -72,6 +72,7 @@ int main(void)
           }
           else
           {
+               // printf("Odpowiedź od poczekalni - brak miejsca, PID:%d\n",getpid());
                // Działania w zależności od odpowiedzi
                if (buf.status == 1)
                {
