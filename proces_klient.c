@@ -14,7 +14,8 @@ int main(void)
      // zapytania do poczekalni i odpowiedzi z niej
 
      int msqid; // nr kolejki komunikatów do zapytań do poczekalnia
-     struct msgbuf buf; // struktura przesyłanych komunikatów
+                // MESSAGE buf;              // komunikat do i z poczekalni
+     struct msgbuf buf;
      pid_t my_pid = getpid(); // do wysłania: swój PID
 
      msqid = msgget(MSG_KEY, 0666); // dostęp do kolejki
@@ -28,18 +29,19 @@ int main(void)
 
      // PIERWSZY KOMUNIKAT, by można było uruchomić serwer poczekalni
 
-     buf.mtype = my_pid; // Ustawiamy PID jako typ wiadomości
-     buf.pid = my_pid;   // treść wiadomości
-          if (msgsnd(msqid, &buf, sizeof(buf), 0) == -1) // wysłanie komunikatu
-          {
-               perror("msgsnd - klient_proces");
-               exit(1);
-          }
-          else
-          {
-               printf("Proces %d wysłał swój PID do kolejki.\n", my_pid);
-               signalSemafor(semID, 0);
-          }
+     buf.mtype = 1 ; // Ustawiamy 0 jako typ wiadomości - do serwera
+     buf.pid = my_pid; // treść wiadomości
+     // wysłanie komunikatu
+     if (msgsnd(msqid, &buf, sizeof(buf), 0) == -1)
+     {
+          perror("msgsnd - klient_proces");
+          exit(1);
+     }
+     else
+     {
+          printf("Proces %d wysłał swój PID do kolejki.\n", my_pid);
+          signalSemafor(semID, 0);
+     }
 
      while (a < 3)
      {
@@ -47,9 +49,10 @@ int main(void)
           // printf("Proces %d wykonuje swoje zadanie...\n", my_pid);
 
           // Wysyłanie PID do kolejki komunikatów
-          buf.mtype = my_pid; // Ustawiamy PID jako typ wiadomości
-          buf.pid = my_pid;   // treść wiadomości
-          if (msgsnd(msqid, &buf, sizeof(buf), 0) == -1) // wysłanie komunikatu
+          buf.mtype = 1 ; // Ustawiamy 1 jako typ wiadomości - do serwera
+          buf.pid = my_pid; // treść wiadomości
+          // wysłanie komunikatu
+          if (msgsnd(msqid, &buf, sizeof(buf), 0) == -1)
           {
                perror("msgsnd - klient_proces");
                exit(1);
@@ -59,18 +62,26 @@ int main(void)
                printf("Proces %d wysłał swój PID do kolejki.\n", my_pid);
           }
 
-          // (po tym jak wiadomość została wysłana)
-          // signalSemafor(semID, 0); // PODNIEŚ SEMAFOR 0 - żeby serwer mógł zacząć odbierać
-          // do rozważenia - inny sposób zakomunikowania serwerowi, że może odbierać
-          // komunikaty od klientów - PONIEWAŻ NIEPOTRZEBNIE PODNOSZĘ SEMAFOR w
-          // w każdej pętli
-
           usleep(100); // częstotliwość wysyłania komunikatów
 
-          a++; // do przerwania pętli cyklu 'życia' klienta
-     }
+          // Oczekiwanie na odpowiedź
+          if (msgrcv(msqid, &buf, sizeof(buf), my_pid, 0) == -1)
+          {
+               perror("msgrcv - klient_proces");
+               exit(1);
+          }
+          else
+          {
+               // Działania w zależności od odpowiedzi
+               if (buf.status == 1)
+               {
+                    printf("Klient %d - potw. dod. do poczekalni.\n", my_pid);
+                    // ... Działania po udanym zapisaniu PID do pamięci współdzielonej ...
+               }
 
-     
+               a++; // do przerwania pętli cyklu 'życia' klienta
+          }
+     }
 
      return 0;
 }

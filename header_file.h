@@ -21,12 +21,33 @@
                        // zapytań przez klientów do poczekalni 
                        // i odpowiedź od poczekalni
 
-// Struktura wiadomości - zapytania o miejsce w poczekalni
+#define SERVER 1
+
+#define SHM_KEY 12345  // Klucz do segmentu pamięci współdzielonej
+                       // miejsce na zapisywanie PIDów klientów, 
+                       // ktorzy weszli do poczekalni
+#define MAX_PIDS 6    // Maksymalna liczba PID-ów - pojemność poczekalni
+
+/*
+typedef struct {
+    long    msg_to;
+    long    msg_fm;
+    pid_t   pid;
+    int status; // 1 - sukces, 0 - brak miejsca
+} MESSAGE;
+*/
+
 struct msgbuf {
     long mtype;
     pid_t pid;
     int status; // 1 - sukces, 0 - brak miejsca
 };
+
+// Struktura danych do przechowywania PID-ów
+typedef struct {
+    pid_t pids[MAX_PIDS]; // tablica PIDów klientów w poczekalni
+    int count; // Licznik zajętych slotów
+}SharedMemory;
 
 
 int alokujSemafor(key_t klucz, int number, int flagi);
