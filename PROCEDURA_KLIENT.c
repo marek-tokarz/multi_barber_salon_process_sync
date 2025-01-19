@@ -4,14 +4,15 @@ int main(void)
 {
     printf("PROCEDURA KLIENT\n");
 
-    int semID;
-    int N = 5;
+    int semID; // numer semafora globalnego
+    int N = 5; // liczba semaforow (na razie wykoryzstywane '0' i '1') // dostęp do smeafora
 
     semID = alokujSemafor(KEY_GLOB_SEM, N, IPC_CREAT | 0666);
 
     // TWORZENIE kolejki komunikatów do zapytań i 
     // odpowiedzi z poczekalni
-    int msqid;
+    int msqid; // nr kolejki komunikatów do zapytań do poczekalnia
+ 
 
     // Tworzenie kolejki komunikatów
     msqid = msgget(MSG_KEY, IPC_CREAT | 0666);
@@ -24,7 +25,7 @@ int main(void)
     // TWORZENIE procesów: proces_klient
 
     int klient_pid;
-    int liczba_klientow = 3;
+    int liczba_klientow = 10;
     int i; // do pętli tworzącej klientów
     
     for (i = 0; i < liczba_klientow; i++)
@@ -44,21 +45,13 @@ int main(void)
         }
     }
 
-    signalSemafor(semID, 0); // PODNIEŚ SEMAFOR 0
-
     // czekanie na wszystkie procesy potomne
     for (i = 0; i < liczba_klientow; i++)
     {
         wait(NULL);
     }
 
-    // do zbadania kolejki komunikatów
-    // sleep(30);
-
-    msgctl(msqid, IPC_RMID, NULL);
 }
-
-
 
 /*
 
