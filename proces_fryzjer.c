@@ -26,6 +26,8 @@ int main(void)
 
     int pid_klienta_do_obsługi;
 
+    int liczba_zabranych_z_poczekalni = 0;
+
     while (liczba_prob_sprawdzenia_poczekalni < 10) // pętla odbioru komunikatów
     {
         waitSemafor(semID_shm, 0, SEM_UNDO); // CZEKAJ NA SEMAFORZE 0
@@ -42,7 +44,9 @@ int main(void)
             shm->pids[shm->counter - 1] = -1;
             shm->counter--;
 
-            printf("Klient o PID %d zabrany z poczekalnia.\n", pid_klienta_do_obsługi);
+            liczba_zabranych_z_poczekalni++;
+
+            // printf("Klient o PID %d zabrany z poczekalnia.\n", pid_klienta_do_obsługi);
         }
         else // brak miejsca
         {
@@ -59,4 +63,9 @@ int main(void)
 
         usleep(200); // częstotliwość sprawdzania poczekalnia
     }
+
+
+    printf("\nfryzjer PID: %d odebrał z poczekalni %d klientów\n",getpid() ,liczba_zabranych_z_poczekalni);
+
+    return 0;
 }

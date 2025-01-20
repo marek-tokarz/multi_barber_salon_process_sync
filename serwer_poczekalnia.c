@@ -50,6 +50,7 @@ int main()
     int liczba_prob_odbioru_nieudanego = 0; // DO PRZERWANIA PĘTLI SERWERA
     // liczba prób odbioru ma zapobiec zamknięci pętli gdy akurat kolejka
     // przypadkowo była pusta, bo klienci nic nie wysłali
+    int liczba_przyjętych_do_poczekalni = 0;
 
     if (msgctl(msqid, IPC_STAT, &buf_info) == -1) // sprawdzanie stanu kolejki
     {
@@ -105,6 +106,7 @@ int main()
             shm->counter++;
             buf.mtype = sender_pid;
             buf.status = 1;
+            liczba_przyjętych_do_poczekalni++;
 
             if (msgsnd(msqid, &buf, sizeof(buf), 0) == -1)
             {
@@ -112,7 +114,7 @@ int main()
                 exit(1);
             }
 
-            printf("PID %d zapisany do pamięci współdzielonej.\n", received_pid);
+            // printf("PID %d zapisany do pamięci współdzielonej.\n", received_pid);
         }
         else // brak miejsca
         {
@@ -150,7 +152,8 @@ int main()
         */
     }
 
-    printf("\nZawartość pamięci współdzielonej:\n");
+    printf("\nLICZBA PRZYJĘTYCH DO POCZEKALNI: %d\n", liczba_przyjętych_do_poczekalni);
+
     printf("Liczba zapisanych PID-ów: %d\n", shm->counter);
     printf("Zapisane PID-y:");
     for (int i = 0; i < shm->counter; i++)

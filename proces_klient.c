@@ -37,13 +37,13 @@ int main(void)
      }
      else
      {
-          printf("Proces %d wysłał swój PID do kolejki.\n", my_pid);
+          // printf("Proces %d wysłał swój PID do kolejki.\n", my_pid);
           signalSemafor(semID, 0);
      }
 
      int a = 0; // do przerwania pętli cyklu: praca -> fryzjer -> praca -> praca ...
 
-     while (a < 3)
+     while (a < 9)
      {
           // ... kod, który wykonuje się w pętli ...
           // printf("Proces %d wykonuje swoje zadanie...\n", my_pid);
@@ -76,7 +76,7 @@ int main(void)
                // Działania w zależności od odpowiedzi
                if (buf.status == 1)
                {
-                    printf("Klient %d - potw. dod. do poczekalni.\n", my_pid);
+                    // printf("Klient %d - potw. dod. do poczekalni.\n", my_pid);
                     // ... Działania po udanym zapisaniu PID do pamięci współdzielonej ...
                }
 
