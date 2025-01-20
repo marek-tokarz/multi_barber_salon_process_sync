@@ -4,6 +4,19 @@ int main(void)
 {
     printf("PROCEDURA FRYZJER\n");
 
+    int LICZBA_FRYZJEROW = 4;
+
+    // UZYSKIWANIE DOSTĘPU DO KOLEJKI KOMUNIKATÓW płatność z góry
+    // TYLKO DO CELU JEJ USUNIĘCIA, GDY ZNIKNĄ fryzjerzy
+     int msqid_pay;
+
+     if ((msqid_pay = msgget(MSG_KEY_PAY, 0666 | IPC_CREAT)) == -1)
+     {
+          perror("msgget");
+          exit(1);
+     }
+
+
     int semID;
     int N = 5;
 
@@ -14,10 +27,9 @@ int main(void)
     // TWORZENIE procesu: proces_fryzjer
 
     int fryzjer_pid;
-    int liczba_fryzjerow = 3;
     int i; // do pętli tworzącej klientów
 
-    for (i = 0; i < liczba_fryzjerow; i++)
+    for (i = 0; i < LICZBA_FRYZJEROW; i++)
     {
         fryzjer_pid = fork();
         switch (fryzjer_pid)
@@ -35,8 +47,14 @@ int main(void)
     }
 
     // czekanie na wszystkie procesy potomne
-    for (i = 0; i < liczba_fryzjerow; i++)
+    for (i = 0; i < LICZBA_FRYZJEROW; i++)
     {
         wait(NULL);
     }
+
+    printf("Fryzjerzy zakończyli pracę\n");
+
+    // Usuwanie kolejki po zniknięciu fryzjerów
+    msgctl(msqid_pay, IPC_RMID, NULL); 
+    return 0;
 }

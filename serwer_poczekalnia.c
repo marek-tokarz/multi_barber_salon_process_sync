@@ -39,7 +39,7 @@ int main()
     // MESSAGE buf;              // komunikat do i z poczekalni
     struct msgbuf buf;
 
-    msqid = msgget(MSG_KEY, 0666); // dostęp do kolejki
+    msqid = msgget(MSG_KEY_WAIT_ROOM, 0666); // dostęp do kolejki
     if (msqid == -1)
     {
         perror("msgget");
@@ -63,7 +63,7 @@ int main()
         signalSemafor(semID_glob, 1); // PODNIEŚ SEMAFOR 1 - dla fryzjerów
     }
 
-    while (liczba_prob_odbioru_nieudanego < 1000) // pętla odbioru komunikatów
+    while (liczba_prob_odbioru_nieudanego < 100) // pętla odbioru komunikatów
     {
 
         // flaga IPC_NOWAIT, aby msgrcv nie zatrzymało pętli serwera

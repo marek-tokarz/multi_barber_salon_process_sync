@@ -4,6 +4,8 @@ int main(void)
 {
     printf("PROCEDURA KLIENT\n");
 
+    int LICZBA_KLIENTOW = 10;
+
     int semID; // numer semafora globalnego
     int N = 5; // liczba semaforow (na razie wykoryzstywane '0' i '1') // dostęp do smeafora
 
@@ -15,7 +17,7 @@ int main(void)
  
 
     // Tworzenie kolejki komunikatów
-    msqid = msgget(MSG_KEY, IPC_CREAT | 0666);
+    msqid = msgget(MSG_KEY_WAIT_ROOM, IPC_CREAT | 0666);
     if (msqid == -1)
     {
         perror("msgget");
@@ -25,10 +27,9 @@ int main(void)
     // TWORZENIE procesów: proces_klient
 
     int klient_pid;
-    int liczba_klientow = 10;
     int i; // do pętli tworzącej klientów
     
-    for (i = 0; i < liczba_klientow; i++)
+    for (i = 0; i < LICZBA_KLIENTOW; i++)
     {
         klient_pid = fork();
         switch (klient_pid)
@@ -46,7 +47,7 @@ int main(void)
     }
 
     // czekanie na wszystkie procesy potomne
-    for (i = 0; i < liczba_klientow; i++)
+    for (i = 0; i < LICZBA_KLIENTOW; i++)
     {
         wait(NULL);
     }
