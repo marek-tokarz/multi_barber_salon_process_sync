@@ -2,9 +2,9 @@
 
 int main(void)
 {
-    printf("PROCEDURA KLIENT\n");
+    printf("[PROCEDURA KLIENT]\n");
 
-    int LICZBA_KLIENTOW = 10;
+    int LICZBA_KLIENTOW = 8;
 
     int semID; // numer semafora globalnego
     int N = 5; // liczba semaforow (na razie wykoryzstywane '0' i '1') // dostęp do smeafora

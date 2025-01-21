@@ -15,10 +15,13 @@
 #include <sys/wait.h>
 #include <errno.h>
 #include <time.h>
+#include <semaphore.h>
 
 #define KEY_GLOB_SEM 1234 // klucz do globalnego semafora chronologii
 
 #define KEY_SHM_SEM 2468 // klucz do semafora dostępu do pamięci dzielonej
+
+#define KEY_FOTEL_SEM 3456 // klucz do semafora fotel
 
 // KOLEJKA DWUSTRONNA
 #define MSG_KEY_WAIT_ROOM 67890  // Klucz do kolejki komunikatów - wysyłanie 
@@ -27,7 +30,7 @@
 
 #define SERVER 1
 
-// KOLEJKA JEDNOSTRONNA
+// KOLEJKA DWUSTRONNA
 #define MSG_KEY_PAY 9753 // klucz kolejki komunikatów do płacenia z góry przez klienta
 
 #define SHM_KEY 12345  // Klucz do segmentu pamięci współdzielonej
@@ -42,8 +45,6 @@
 #define LICZBA_ZAPYTAN_KLIENTA 9 // + jedno zapytanie do uwolnienia semafora
 #define LICZBA_FRYZJEROW 10
 */
-
-
 
 // Struktura komunikatu w kolejce dwukierunkowej: klient <-> poczekalnia
 struct msgbuf {
@@ -66,12 +67,15 @@ typedef struct {
 } Banknoty;
 
 // Struktura komunikatu do płacenia z góry przez klienta
+// oraz do informowania klienta, że będzie obsługiwny
 struct pay {
     long mtype;       // Typ komunikatu
-	int kwota[3];
-    // int banknot50;     
-	// int banknot20; 
-	// int banknot10; 
+	int klient_PID;
+	int fryzjer_PID;
+	int banknoty[3];
+	int kwota_do_zaplaty;
+	int reszta;
+	// SUMA BAJTÓW: 28 (7 x int)
 };
 
 int alokujSemafor(key_t klucz, int number, int flagi);
@@ -84,6 +88,8 @@ int zwolnijSemafor(int semID, int number);
 
 /*
 SCHEMAT DZIAŁANIA PAMIĘCI DZIELONEJ
+
+-- zmiana w pamięci: fryzjer zabiera klienta tablica[0] - pierwszy w poczekalni (counter = 1)
 	
 SCHEMAT 6 SEKWENCYJNYCH ZAPISÓW DO POCZEKALNI:
 

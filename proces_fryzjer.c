@@ -2,7 +2,13 @@
 
 int main(void)
 {
-    printf("proces fryzjer: %d\n", getpid());
+    printf("[ fryzjer %d] proces uruchomiony\n", getpid());
+
+    int pid_fryzjera = getpid();
+
+    // SEMAFOR FOTELI
+
+    int semID_fotel = alokujSemafor(KEY_FOTEL_SEM, 1, 0666 | IPC_CREAT);
 
     int semID_shm; // numer semafora pamięci współdzielonej
     int B = 1;
@@ -74,6 +80,22 @@ int main(void)
 
         if (pid_klienta != 0) // na roboczo, by nie czekać na kom.
         {                     // jeśli nie mam klienta do obsługi
+
+            struct pay obsluga;
+
+            obsluga.mtype = pid_klienta;
+            obsluga.fryzjer_PID = pid_fryzjera;
+
+            if (msgsnd(msqid_pay, &obsluga, 7 * sizeof(int), 0) == -1)
+            {
+                perror("msgsnd - fryzjera - obsługa klienta");
+                exit(1);
+            }
+            else
+            {
+                printf("[ fryzjer %d] wysłał potw., że będzie obsługiwać klienta\n", getpid());
+            }
+
             // płatność z góry
 
             struct pay platnosc; // platnosc od klienta
@@ -82,10 +104,17 @@ int main(void)
 
             int prosby_o_platnosc_z_gory = 0;
 
+            // POTRZEBNY MECHANIZM WYSYŁANIA WIADOMOŚCI DO KLIENTA
+            // ŻE BĘDZIE OBSŁUGIWANY - W PRZECIWNYM WYPADKU
+            // PŁACI Z GÓRY OD RAZU JAK SIĘ DOSTANIE DO POCZEKALNI
+
+            int dokonano_platnosci = 0;
+
             while (prosby_o_platnosc_z_gory < 5) // by nie czekać w nieskończoność na płatność
             {                                    // czyli nie utkwić na msgrcv
-                 
-                if (msgrcv(msqid_pay, &platnosc, sizeof(platnosc.kwota), pid_klienta, IPC_NOWAIT) == -1)
+
+                // RACZEJ BEZ IPC_NOWAIT - fryzjer ma czekać na kasę od klienta
+                if (msgrcv(msqid_pay, &platnosc, 7 * sizeof(int), pid_fryzjera, IPC_NOWAIT) == -1)
                 {
                     // perror("msgrcv - fryzjer");
                     prosby_o_platnosc_z_gory++;
@@ -93,21 +122,30 @@ int main(void)
                 }
                 else
                 {
-                    printf("Fryzjer otrzymał płatność od: %d\n", pid_klienta);
-                    prosby_o_platnosc_z_gory = 3; // ZAKOŃCZ PĘTLĘ czekania na płatność
+                    printf("[ fryzjer %d] otrzymał płatność od: %d\n", getpid(), pid_klienta);
+                    prosby_o_platnosc_z_gory = 6; // ZAKOŃCZ PĘTLĘ czekania na płatność
+                    dokonano_platnosci = 1;
                 }
 
-                prosby_o_platnosc_z_gory++;
-
-                usleep(100);
+                usleep(50);
             }
 
-            if (prosby_o_platnosc_z_gory != 0)
+            prosby_o_platnosc_z_gory = 0; // by w kolejnych programach czekać na płatność
+
+            if (dokonano_platnosci == 0)
             {
                 printf("Klient nie zapłacił\n");
             }
 
-            // COŚ POWODUJE BŁĄD: *** stack smashing detected ***: terminated
+            // SEMAFOR FOTELA
+
+            if (waitSemafor(semID_fotel, 0, 0) == 1)
+            {
+                printf("[ fryzjer %d] mam fotel\n", pid_fryzjera);
+                usleep(10); // Symulacja użycia zasobu
+                printf("[ fryzjer %d] zwalniam fotel\n", pid_fryzjera);
+                signalSemafor(semID_fotel, 0);
+            }
         }
 
         pid_klienta = 0;

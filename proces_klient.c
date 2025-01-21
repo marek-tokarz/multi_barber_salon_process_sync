@@ -2,9 +2,10 @@
 
 int main(void)
 {
-     printf("proces klient: %d\n", getpid());
+     printf("[ klient %d] proces uruchomiony \n", getpid());
 
-     int LICZBA_ZAPYTAN_KLIENTA = 10;
+
+     int LICZBA_ZAPYTAN_KLIENTA = 9; // + jedno zapytanie do uwolnienia semafora
 
      // SEMAFOR GLOBALNY DO CHRONOLOGII
 
@@ -21,7 +22,7 @@ int main(void)
      // Zainicjalizuj generator liczb losowych za pomocą ID procesu
      srand(my_pid);
 
-     // UZYSKIWANIE DOSTĘPU DO KOLEJKI KOMUNIKATÓW płatność z góry
+     // UZYSKIWANIE DOSTĘPU DO KOLEJKI KOMUNIKATÓW płatność z góry i potw. obsługi
 
      int msqid_pay;
 
@@ -79,7 +80,7 @@ int main(void)
                  portfel.banknot50, portfel.banknot20, portfel.banknot10);
           */
 
-          // Wysyłanie PID do kolejki komunikatów
+          // Wysyłanie PID do kolejki komunikatów poczekalni
           buf.mtype = SERVER; // Ustawiamy 1 jako typ wiadomości - do serwera
           buf.pid = my_pid;   // treść wiadomości
           // wysłanie komunikatu
@@ -106,33 +107,44 @@ int main(void)
                // Działania w zależności od odpowiedzi
                if (buf.status == 1)
                {
+                    // DWUSTRONNA KOLEJKA KOMUNIKATÓW
+
+                    // FRYZJER -> KLIENT: JESTEŚ OBSŁUGIWANY
+
+                    // KLIENT -> FRYZJER: PŁATNOŚĆ Z GÓRY
+
                     // KLIENT OBSŁUGIWANY PRZEZ FRYZJERA
 
-                    struct pay Platnosc_z_gory;
+                    struct pay obsluga;
 
-                    /*
-                    Platnosc_z_gory.mtype = my_pid;
-                    // 160 zl
-                    Platnosc_z_gory.banknot50 = 2;
-                    Platnosc_z_gory.banknot50 = 2;
-                    Platnosc_z_gory.banknot50 = 2;
-                    */
-
-                    Platnosc_z_gory.mtype = my_pid;
-                    // 160 zl
-
-                    Platnosc_z_gory.kwota[0] = 2;
-                    Platnosc_z_gory.kwota[1] = 2;
-                    Platnosc_z_gory.kwota[2] = 2;
-
-                    if (msgsnd(msqid_pay, &Platnosc_z_gory, sizeof(Platnosc_z_gory.kwota), 0) == -1)
+                    if (msgrcv(msqid_pay, &obsluga, 7*sizeof(int), my_pid, 0) == -1)
                     {
-                         perror("msgsnd - klient_proces - platnosc_z_gory");
+                         perror("msgrcv - klient - potw. obsługi przez fryzjera\n");
                          exit(1);
                     }
                     else
                     {
-                         printf("Klient %d wysłał płatność z góry.\n", my_pid);
+                        printf("[ klient %d] otrzymał potw., że będzie obsługiwany\n", getpid());
+                    }
+
+                    struct pay Platnosc_z_gory;
+
+
+                    Platnosc_z_gory.mtype = obsluga.fryzjer_PID;
+                    // 160 zl
+
+                    Platnosc_z_gory.banknoty[0] = 2;
+                    Platnosc_z_gory.banknoty[1] = 2;
+                    Platnosc_z_gory.banknoty[2] = 2;
+     
+                    if (msgsnd(msqid_pay, &Platnosc_z_gory, 7*sizeof(int), 0) == -1)
+                    {
+                         perror("msgsnd - klient_proces - platnosc_z_gory\n");
+                         exit(1);
+                    }
+                    else
+                    {
+                         printf("[ klient %d] wysłał płatność z góry.\n", my_pid);
                     }
                }
 

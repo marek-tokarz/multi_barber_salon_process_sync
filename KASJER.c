@@ -85,7 +85,7 @@ int main(void)
     }
     else
     {
-        printf("PROCEDURA_KLIENT zakończona\n");
+        printf("[PROCEDURA_KLIENT] zakończona\n");
     }
 
     zakonczony_pid = waitpid(FRYZJER_pid, &status, 0); // czekanie na PROCEDURA_FRYZJER
@@ -95,7 +95,7 @@ int main(void)
     }
     else
     {
-        printf("PROCEDURA_FRYZJER zakończona\n");
+        printf("[PROCEDURA_FRYZJER] zakończona\n");
     }
 
     zakonczony_pid = waitpid(serwer_poczekalnia_pid, &status, 0); // czekanie na serwer_poczekalnia
@@ -105,7 +105,7 @@ int main(void)
     }
     else
     {
-        printf("serwer_poczekalnia_pid zakończona\n");
+        printf("[serwer_poczekalnia] zakończona\n");
     }
 
     zwolnijSemafor(semID, N); // USUWANIE SEMAFOR BLOBALNEGO do chronologii

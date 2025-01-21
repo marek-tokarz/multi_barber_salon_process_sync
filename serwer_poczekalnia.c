@@ -16,7 +16,7 @@ int main()
     waitSemafor(semID_glob, 0, SEM_UNDO); // CZEKAJ NA SEMAFORZE 0 - od klientów
     // znak, że wysyłają już komunikaty
 
-    printf("PROCEDURA serwer_poczekalnia\n");
+    printf("[PROCEDURA serwer_poczekalnia]\n");
 
     // TWORZENIE PAMIĘCI WSPÓŁDZIELONEJ
 
@@ -63,7 +63,7 @@ int main()
         signalSemafor(semID_glob, 1); // PODNIEŚ SEMAFOR 1 - dla fryzjerów
     }
 
-    while (liczba_prob_odbioru_nieudanego < 100) // pętla odbioru komunikatów
+    while (liczba_prob_odbioru_nieudanego < 1000) // pętla odbioru komunikatów
     {
 
         // flaga IPC_NOWAIT, aby msgrcv nie zatrzymało pętli serwera

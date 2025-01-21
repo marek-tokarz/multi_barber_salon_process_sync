@@ -2,20 +2,23 @@
 
 int main(void)
 {
-    printf("PROCEDURA FRYZJER\n");
+    printf("[PROCEDURA FRYZJER]\n");
+
+    int LICZBA_FOTELI = 2;
 
     int LICZBA_FRYZJEROW = 4;
 
     // UZYSKIWANIE DOSTĘPU DO KOLEJKI KOMUNIKATÓW płatność z góry
     // TYLKO DO CELU JEJ USUNIĘCIA, GDY ZNIKNĄ fryzjerzy
-     int msqid_pay;
+    int msqid_pay;
 
-     if ((msqid_pay = msgget(MSG_KEY_PAY, 0666 | IPC_CREAT)) == -1)
-     {
-          perror("msgget");
-          exit(1);
-     }
+    if ((msqid_pay = msgget(MSG_KEY_PAY, 0666 | IPC_CREAT)) == -1)
+    {
+        perror("msgget");
+        exit(1);
+    }
 
+    // SEMAFOR GLOBALNY do chronologii wstępnej
 
     int semID;
     int N = 5;
@@ -23,6 +26,13 @@ int main(void)
     semID = alokujSemafor(KEY_GLOB_SEM, N, IPC_CREAT | 0666);
 
     waitSemafor(semID, 1, SEM_UNDO); // CZEKAJ NA SEMAFORZE 1
+
+    // SEMAFOR FOTELI
+
+    int semID_fotel = alokujSemafor(KEY_FOTEL_SEM, 1, 0666 | IPC_CREAT);
+
+    // Inicjalizacja semafora - licznik ustawiony na 2 (dostępne dwa zasoby)
+    inicjalizujSemafor(semID_fotel, 0, LICZBA_FOTELI);
 
     // TWORZENIE procesu: proces_fryzjer
 
@@ -55,6 +65,15 @@ int main(void)
     printf("Fryzjerzy zakończyli pracę\n");
 
     // Usuwanie kolejki po zniknięciu fryzjerów
-    msgctl(msqid_pay, IPC_RMID, NULL); 
+    msgctl(msqid_pay, IPC_RMID, NULL);
+
+    // Usuwanie semafora foteli
+
+    if (zwolnijSemafor(semID_fotel, 0) == -1) {
+        perror("Błąd zwolnijSemafor:");
+        exit(1);
+    }
+
+
     return 0;
 }
