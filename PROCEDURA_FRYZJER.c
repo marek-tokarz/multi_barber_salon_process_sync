@@ -58,6 +58,9 @@ int main(void)
         }
     }
 
+    // SEMAFOR DLA URUCHOMIENIA KASY
+    signalSemafor(semID, 2); // PODNIEŚ SEMAFOR 2 - dla kasy
+
     // czekanie na wszystkie procesy potomne
     for (i = 0; i < LICZBA_FRYZJEROW; i++)
     {

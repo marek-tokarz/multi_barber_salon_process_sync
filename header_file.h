@@ -27,34 +27,7 @@
 #define MSG_KEY_WAIT_ROOM 67890  // Klucz do kolejki komunikatów - wysyłanie 
                        // zapytań przez klientów do poczekalni 
                        // i odpowiedź od poczekalni
-
 #define SERVER 1
-
-// KOLEJKA DWUSTRONNA
-#define MSG_KEY_PAY 9753 // klucz kolejki komunikatów do płacenia z góry przez klienta
-						 // oraz do informowania klienta, że będie obsługiwany
-
-#define SHM_KEY 12345  // Klucz do segmentu pamięci współdzielonej
-                       // miejsce na zapisywanie PIDów klientów, 
-                       // ktorzy weszli do poczekalni
-// SCHEMAT DZIAŁANIA PAMIĘCI NA SAMYM DOLE, POD '#endif // HEADER_FILE'
-
-#define MAX_PIDS 6    // Maksymalna liczba PID-ów - pojemność poczekalni
-
-// KOLEJKA JEDNOSTRONNA
-#define MSG_KEY_CASH 7531	// Klucz do kolejki komunikatów od fryzjera do kasy
-						// czyli do przekazania opłaty klienta i poinformowania 
-						// o reszczie dla niego
-
-// KOLEJKA JEDNOSTRONNA
-#define MSG_KEY_CHANGE 7531	// Klucz do kolejki komunikatów od kasy do klienta
-						// czyli wydanie reszty z kasy
-
-/* NIE DZIAŁA
-#define LICZBA_KLIENTOW 10
-#define LICZBA_ZAPYTAN_KLIENTA 9 // + jedno zapytanie do uwolnienia semafora
-#define LICZBA_FRYZJEROW 10
-*/
 
 // Struktura komunikatu w kolejce dwukierunkowej: klient <-> poczekalnia
 struct msgbuf {
@@ -63,18 +36,9 @@ struct msgbuf {
     int status; // 1 - sukces, 0 - brak miejsca
 };
 
-// Struktura danych do przechowywania PID-ów
-typedef struct {
-    pid_t pids[MAX_PIDS]; // tablica PIDów klientów w poczekalni
-    int counter; // Licznik osób w poczekalni
-}SharedMemory;
-
-// Struktura danych - 'portfel' klienta i kasa
-typedef struct {
-    int banknot50;
-    int banknot20;
-    int banknot10;
-} Banknoty;
+// KOLEJKA DWUSTRONNA
+#define MSG_KEY_PAY 9753 // klucz kolejki komunikatów do płacenia z góry przez klienta
+						 // oraz do informowania klienta, że będie obsługiwany
 
 // Struktura komunikatu do płacenia z góry przez klienta
 // oraz do informowania klienta, że będzie obsługiwny
@@ -88,6 +52,53 @@ struct pay {
 	// SUMA BAJTÓW: 28 (7 x int)
 };
 
+#define SHM_KEY 12345  // Klucz do segmentu pamięci współdzielonej
+                       // miejsce na zapisywanie PIDów klientów, 
+                       // ktorzy weszli do poczekalni
+// SCHEMAT DZIAŁANIA PAMIĘCI NA SAMYM DOLE, POD '#endif // HEADER_FILE'
+
+#define MAX_PIDS 6    // Maksymalna liczba PID-ów - pojemność poczekalni
+
+// Struktura danych do przechowywania PID-ów
+typedef struct {
+    pid_t pids[MAX_PIDS]; // tablica PIDów klientów w poczekalni
+    int counter; // Licznik osób w poczekalni
+}SharedMemory;
+
+// KOLEJKA JEDNOSTRONNA
+#define MSG_KEY_CASH 7531	// Klucz do kolejki komunikatów od fryzjera do kasy
+						// czyli do przekazania opłaty klienta i poinformowania 
+						// o reszczie dla niego
+
+#define CASH_REGISTER 1
+
+struct cash {
+    long mtype;       // Typ komunikatu
+	int klient_PID;
+	int reszta_dla_klienta;
+	int banknoty[3];
+	// SUMA BAJTÓW: 20 (5 x int)
+};
+
+// KOLEJKA JEDNOSTRONNA
+#define MSG_KEY_CHANGE 5382	// Klucz do kolejki komunikatów od kasy do klienta
+						    // czyli wydanie reszty z kasy
+
+/* NIE DZIAŁA
+#define LICZBA_KLIENTOW 10
+#define LICZBA_ZAPYTAN_KLIENTA 9 // + jedno zapytanie do uwolnienia semafora
+#define LICZBA_FRYZJEROW 10
+*/
+
+// Struktura danych - 'portfel' klienta i kasa
+typedef struct {
+    int banknot50;
+    int banknot20;
+    int banknot10;
+} Banknoty;
+
+// DEKLARACJE FUNKCJI SEMAFORÓW
+
 int alokujSemafor(key_t klucz, int number, int flagi);
 void inicjalizujSemafor(int semID, int number, int val);
 int waitSemafor(int semID, int number, int flags);
@@ -99,6 +110,7 @@ int zwolnijSemafor(int semID, int number);
 /*
 SCHEMAT DZIAŁANIA PAMIĘCI DZIELONEJ
 
+'SPRAWIEDLIWA KOLEJKA'
 -- zmiana w pamięci: fryzjer zabiera klienta tablica[0] - pierwszy w poczekalni (counter = 1)
 	
 SCHEMAT 6 SEKWENCYJNYCH ZAPISÓW DO POCZEKALNI:

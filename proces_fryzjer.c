@@ -15,13 +15,25 @@ int main(void)
     // dostęp do semafora pamięci wspóldzielonej - poczekalnia
     semID_shm = alokujSemafor(KEY_SHM_SEM, B, IPC_CREAT | 0666);
 
-    // UZYSKIWANIE DOSTĘPU DO KOLEJKI KOMUNIKATÓW płatność z góry
+    // UZYSKIWANIE DOSTĘPU DO KOLEJKI KOMUNIKATÓW fryzjer <-> klient
+    // obsługa klienta przez fryzjera i płatność z góry przez klienta
 
     int msqid_pay;
 
     if ((msqid_pay = msgget(MSG_KEY_PAY, 0666 | IPC_CREAT)) == -1)
     {
-        perror("msgget");
+        perror("msgget - service/paying");
+        exit(1);
+    }
+
+    // UZYSKIWANIE DOSTĘPU DO KOLEJKI KOMUNIKATÓW fryjer -> kasa
+    // zapłata za usługę od klienta i reszta do wydania dla klienta przez kasę
+
+    int msqid_cash;
+
+    if ((msqid_cash = msgget(MSG_KEY_CASH, 0666 | IPC_CREAT)) == -1)
+    {
+        perror("msgget - cash");
         exit(1);
     }
 
@@ -68,7 +80,7 @@ int main(void)
 
             // printf("Klient o PID %d zabrany z poczekalnia.\n", pid_klienta_do_obslugi);
         }
-        else // brak miejsca
+        else
         {
             // printf("Poczekalnia pusta\n");
         }
@@ -144,10 +156,37 @@ int main(void)
                 if (waitSemafor(semID_fotel, 0, 0) == 1)
                 {
                     // printf("[ fryzjer %d] mam fotel\n", pid_fryzjera);
-                    usleep(10); // Symulacja użycia zasobu
+                    usleep(10); // Symulacja użycia zasobu - fotela - strzyżenie
                     // printf("[ fryzjer %d] zwalniam fotel\n", pid_fryzjera);
                     signalSemafor(semID_fotel, 0);
                 }
+
+                // WYSYŁANIE PIENIĘDZY OD KLIENTA DO KASY
+                struct cash zaplata_reszta;
+
+                int reszta_do_wydania = 0;
+                int KOSZT_OBSLUGI = 150;
+                int wplata_od_klienta = platnosc.banknoty[0]*50 + platnosc.banknoty[1]*20 + platnosc.banknoty[0]*10;
+                reszta_do_wydania = KOSZT_OBSLUGI - wplata_od_klienta;
+
+                zaplata_reszta.mtype = CASH_REGISTER;
+                zaplata_reszta.klient_PID = pid_klienta;
+                zaplata_reszta.reszta_dla_klienta = reszta_do_wydania;
+                zaplata_reszta.banknoty[0] = platnosc.banknoty[0];
+                zaplata_reszta.banknoty[1] = platnosc.banknoty[1];
+                zaplata_reszta.banknoty[2] = platnosc.banknoty[2];
+
+                if (msgsnd(msqid_cash, &zaplata_reszta, 5 * sizeof(int), 0) == -1)
+                {
+                    perror("msgsnd - fryzjera - zaplata_reszta");
+                    exit(1);
+                }
+                else
+                {
+                    // printf("[ fryzjer %d] wysłał zapłatę klienta\n", getpid());
+                }
+
+
             }
         }
 
@@ -160,7 +199,7 @@ int main(void)
 
     shmdt(shm); // Odłączamy pamięć współdzieloną
 
-    printf("\nfryzjer PID: %d odebrał z poczekalni %d klientów\n", getpid(), liczba_zabranych_z_poczekalni);
+    printf("\n[fryzjer %d]: odebrał z poczekalni %d klientów\n", getpid(), liczba_zabranych_z_poczekalni);
 
     return 0;
 }

@@ -75,6 +75,24 @@ int main(void)
         break;
     }
 
+    // TWORZENIE PROCEDURY: serwer_kasa
+
+    int  serwer_kasa_pid;
+
+    serwer_kasa_pid = fork();
+    switch (serwer_kasa_pid)
+    {
+    case -1: // Błąd przy fork
+        perror("fork failed");
+        exit(1);
+    case 0: // Proces potomny - Uruchomienie nowego programu
+        execl("./serwer_kasa", "serwer_kasa", (char *)NULL);
+        perror("exec: serwer_kasa failed");  
+        exit(1); // Jeśli execlp nie zadziałało
+    default: // Proces macierzysty
+        break;
+    }
+
     int status;
     pid_t zakonczony_pid;
 
@@ -108,7 +126,17 @@ int main(void)
         printf("[serwer_poczekalnia] zakończona\n");
     }
 
-    zwolnijSemafor(semID, N); // USUWANIE SEMAFOR BLOBALNEGO do chronologii
+    zakonczony_pid = waitpid(serwer_kasa_pid, &status, 0); // czekanie na serwer_kasa
+    if (zakonczony_pid == -1)
+    {
+        perror("waitpid failed for serwer_poczekalnia_pid");
+    }
+    else
+    {
+        printf("[serwer_kasa] zakończona\n");
+    }
+
+    zwolnijSemafor(semID, N); // USUWANIE SEMAFOR GLOBALNEGO do chronologii
 
     return 0;
 }
