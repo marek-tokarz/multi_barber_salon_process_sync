@@ -6,6 +6,8 @@ int main(void)
 
     int pid_fryzjera = getpid();
 
+    int KOSZT_OBSLUGI = 120;
+
     // SEMAFOR FOTELI
 
     int semID_fotel = alokujSemafor(KEY_FOTEL_SEM, 1, 0666 | IPC_CREAT);
@@ -139,19 +141,23 @@ int main(void)
                 usleep(50);
             }
 
+            
+
             prosby_o_platnosc_z_gory = 0; // by w kolejnych programach czekać na płatność
 
             if (dokonano_platnosci == 0)
             {
-                printf("Klient nie zapłacił\n");
+                printf("[ fryzjer ] klient nie zapłacił\n");
             }
             else
             {
                 // FRYZJER OTRZYMAŁ KWOTĘ/BANKNOTY:
-                // printf("Płatność - banknoty 50 zł: %d\n",platnosc.banknoty[0]);
-                // printf("Płatność - banknoty 20 zł: %d\n",platnosc.banknoty[1]);
-                // printf("Płatność - banknoty 10 zł: %d\n",platnosc.banknoty[2]);
-
+                /*
+                printf("[fryzjer] otrzymał kwotę:\n");
+                printf("Płatność - banknoty 50 zł: %d\n",platnosc.banknoty[0]);
+                printf("Płatność - banknoty 20 zł: %d\n",platnosc.banknoty[1]);
+                printf("Płatność - banknoty 10 zł: %d\n",platnosc.banknoty[2]);
+                */
                 // SEMAFOR FOTELA - semafor liczący
                 if (waitSemafor(semID_fotel, 0, 0) == 1)
                 {
@@ -165,9 +171,10 @@ int main(void)
                 struct cash zaplata_reszta;
 
                 int reszta_do_wydania = 0;
-                int KOSZT_OBSLUGI = 150;
-                int wplata_od_klienta = platnosc.banknoty[0]*50 + platnosc.banknoty[1]*20 + platnosc.banknoty[0]*10;
-                reszta_do_wydania = KOSZT_OBSLUGI - wplata_od_klienta;
+                int wplata_od_klienta = platnosc.banknoty[0]*50 + platnosc.banknoty[1]*20 + platnosc.banknoty[2]*10;
+                reszta_do_wydania = wplata_od_klienta - KOSZT_OBSLUGI;  
+
+                // printf("Reszta wyliczona u fryzjera: %d\n",reszta_do_wydania);
 
                 zaplata_reszta.mtype = CASH_REGISTER;
                 zaplata_reszta.klient_PID = pid_klienta;
@@ -175,6 +182,15 @@ int main(void)
                 zaplata_reszta.banknoty[0] = platnosc.banknoty[0];
                 zaplata_reszta.banknoty[1] = platnosc.banknoty[1];
                 zaplata_reszta.banknoty[2] = platnosc.banknoty[2];
+
+                /*
+                printf("zaplata_reszta.mtype %ld\n",zaplata_reszta.mtype);
+                printf("zaplata_reszta.klient_PID %d\n",zaplata_reszta.klient_PID );
+                printf("zaplata_reszta.reszta_dla_klienta %d\n",zaplata_reszta.reszta_dla_klienta);
+                printf("zaplata_reszta.banknoty[0] %d\n",zaplata_reszta.banknoty[0] );
+                printf("zaplata_reszta.banknoty[1] %d\n",zaplata_reszta.banknoty[1]);
+                printf("zaplata_reszta.banknoty[2] %d\n",zaplata_reszta.banknoty[2]);
+                */
 
                 if (msgsnd(msqid_cash, &zaplata_reszta, 5 * sizeof(int), 0) == -1)
                 {
@@ -185,8 +201,6 @@ int main(void)
                 {
                     // printf("[ fryzjer %d] wysłał zapłatę klienta\n", getpid());
                 }
-
-
             }
         }
 
@@ -199,7 +213,7 @@ int main(void)
 
     shmdt(shm); // Odłączamy pamięć współdzieloną
 
-    printf("\n[fryzjer %d]: odebrał z poczekalni %d klientów\n", getpid(), liczba_zabranych_z_poczekalni);
+    printf("\n[ fryzjer %d ]: odebrał z poczekalni %d klientów\n", getpid(), liczba_zabranych_z_poczekalni);
 
     return 0;
 }

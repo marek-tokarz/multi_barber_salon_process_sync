@@ -16,6 +16,7 @@
 #include <errno.h>
 #include <time.h>
 #include <semaphore.h>
+#include <pthread.h>
 
 #define KEY_GLOB_SEM 1234 // klucz do globalnego semafora chronologii
 
@@ -57,7 +58,7 @@ struct pay {
                        // ktorzy weszli do poczekalni
 // SCHEMAT DZIAŁANIA PAMIĘCI NA SAMYM DOLE, POD '#endif // HEADER_FILE'
 
-#define MAX_PIDS 6    // Maksymalna liczba PID-ów - pojemność poczekalni
+#define MAX_PIDS 3    // Maksymalna liczba PID-ów - pojemność poczekalni
 
 // Struktura danych do przechowywania PID-ów
 typedef struct {
@@ -83,6 +84,12 @@ struct cash {
 // KOLEJKA JEDNOSTRONNA
 #define MSG_KEY_CHANGE 5382	// Klucz do kolejki komunikatów od kasy do klienta
 						    // czyli wydanie reszty z kasy
+
+struct change {
+    long mtype;       // Typ komunikatu
+	int banknoty[3];
+	// SUMA BAJTÓW: 8 (2 x int)
+};
 
 /* NIE DZIAŁA
 #define LICZBA_KLIENTOW 10

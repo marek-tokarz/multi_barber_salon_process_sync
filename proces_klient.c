@@ -4,8 +4,11 @@ int main(void)
 {
      printf("[ klient %d] proces uruchomiony \n", getpid());
 
+     int ZAPLATA_Z_GORY_50_ZL = 3;
+     int ZAPLATA_Z_GORY_20_ZL = 0;
+     int ZAPLATA_Z_GORY_10_ZL = 0;
 
-     int LICZBA_ZAPYTAN_KLIENTA = 9; // + jedno zapytanie do uwolnienia semafora
+     int LICZBA_ZAPYTAN_KLIENTA = 4; // + jedno zapytanie do uwolnienia semafora
 
      // SEMAFOR GLOBALNY DO CHRONOLOGII
 
@@ -143,9 +146,9 @@ int main(void)
                     Platnosc_z_gory.mtype = obsluga.fryzjer_PID;
                     // 160 zl
 
-                    Platnosc_z_gory.banknoty[0] = 2;
-                    Platnosc_z_gory.banknoty[1] = 2;
-                    Platnosc_z_gory.banknoty[2] = 2;
+                    Platnosc_z_gory.banknoty[0] = 3;
+                    Platnosc_z_gory.banknoty[1] = 0;
+                    Platnosc_z_gory.banknoty[2] = 0;
      
                     if (msgsnd(msqid_pay, &Platnosc_z_gory, 7*sizeof(int), 0) == -1)
                     {

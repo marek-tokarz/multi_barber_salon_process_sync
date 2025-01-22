@@ -123,7 +123,7 @@ int main()
             }
         }
 
-        if (shm->counter < MAX_PIDS && jest_w_poczekalni == 0)
+        if (shm->counter < MAX_PIDS && jest_w_poczekalni == 0 && received_pid > 0)
         {
             shm->pids[shm->counter] = received_pid;
             shm->counter++;

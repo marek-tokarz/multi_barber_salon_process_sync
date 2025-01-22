@@ -1,5 +1,6 @@
 #include "header_file.h"
-#include <pthread.h>
+
+int sprawdz_czy_jest_reszta(int reszta_dla_klienta, Banknoty *Kasa);
 
 /*
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -36,12 +37,12 @@ int main(void)
 
   // SEMAFOR GLOBALNY do chronologii wstępnej
 
-    printf("[PROCEDURA serwer_poczekalnia]\n");
+  printf("[PROCEDURA serwer_poczekalnia]\n");
 
-    int semID;
-    int N = 5;
+  int semID;
+  int N = 5;
 
-    semID = alokujSemafor(KEY_GLOB_SEM, N, IPC_CREAT | 0666);
+  semID = alokujSemafor(KEY_GLOB_SEM, N, IPC_CREAT | 0666);
 
   // UZYSKIWANIE DOSTĘPU DO KOLEJKI KOMUNIKATÓW fryjer -> kasa
   // zapłata za usługę od klienta i reszta do wydania dla klienta przez kasę
@@ -75,6 +76,8 @@ int main(void)
 
   int wplaty_od_klientow = 0;
 
+  int dotarla_gotowka = 0;
+
   while (transakcje < LICZBA_TRANSAKCJI)
   {
 
@@ -83,12 +86,12 @@ int main(void)
     int sprawdzam_kolejke = 0;
 
     while (sprawdzam_kolejke < 5) // by nie czekać w nieskończoność na płatność
-    {                                    // czyli nie utkwić na msgrcv
+    {                             // czyli nie utkwić na msgrcv
 
       // RACZEJ BEZ IPC_NOWAIT - fryzjer ma czekać na kasę od klienta
       if (msgrcv(msqid_cash, &klient_wplacil, 5 * sizeof(int), CASH_REGISTER, IPC_NOWAIT) == -1)
       {
-        // perror("msgrcv - fryzjer");
+        // perror("msgrcv - kasa");
         sprawdzam_kolejke++;
         usleep(10);
       }
@@ -97,25 +100,38 @@ int main(void)
         // printf("[ kasa ] otrzymała płatność od: %d\n", klient_wplacil.klient_PID);
         sprawdzam_kolejke = 6; // ZAKOŃCZ PĘTLĘ czekania na płatność
         wplaty_od_klientow++;
-
+        dotarla_gotowka = 1;
       }
-
       usleep(50);
     }
 
     sprawdzam_kolejke = 0; // by w kolejnych obiegach pętli czekać na płatność
 
-    // odbieraj wiadomości od fryzjerów
+    if (dotarla_gotowka == 1)
+    {
+      // printf("[ kasa ] Do zwrotu klientowi: %d\n", klient_wplacil.reszta_dla_klienta);
 
-    // umieść banknoty w kasie
+      // SEMAFOR DOSTĘPU DO KASY
 
-    // KASA.banknot50 += msg.banknot50;
-    // KASA.banknot20 += msg.banknot20;
-    // KASA.banknot10 += msg.banknot10;
+      KASA.banknot50 += klient_wplacil.banknoty[0];
+      KASA.banknot20 += klient_wplacil.banknoty[1];
+      KASA.banknot10 += klient_wplacil.banknoty[2];
 
-    // sprawdź czy dla danej wpłaty od klienta można zwrócić resztę
+      // sprawdź czy dla danej wpłaty od klienta można zwrócić resztę
 
-    // sprawdz_reszte();
+      // sprawdz_reszte();
+
+      if (klient_wplacil.reszta_dla_klienta == 0)
+      {
+        // WYŚLIJ 0 ZŁ DO KLIENTA, PONIEWAŻ CZEKA NA msgrcv
+      }
+      else
+      {
+        sprawdz_czy_jest_reszta(klient_wplacil.reszta_dla_klienta, &KASA);
+      }
+    }
+
+    dotarla_gotowka = 0; // zerowanie przed odbiorem kolejnej wiadomości
 
     // if (sprawdz_reszte() == 1)
     // jeśli tak, to wyślij do klienta resztę w postaci banknotów o określonych nominałach
@@ -127,7 +143,47 @@ int main(void)
     transakcje++;
   }
 
-  printf("Wpłaty od klientów - łącznie wpłat: %d\n",wplaty_od_klientow);
+  printf("[ kasa ] wpłaty od klientów - łącznie wpłat: %d\n", wplaty_od_klientow);
 
   return 0;
+}
+
+int sprawdz_czy_jest_reszta(int reszta_dla_klienta, Banknoty *Kasa)
+{
+  int reszta[3] = {0}; // Liczba banknotów każdego nominału wydanych jako reszta
+
+  // Wydawanie banknotów 50 zł
+  while (reszta_dla_klienta >= 50 && Kasa->banknot50 > 0)
+  {
+    reszta_dla_klienta -= 50;
+    Kasa->banknot50--;
+    reszta[0]++;
+  }
+
+  // Wydawanie banknotów 20 zł
+  while (reszta_dla_klienta >= 20 && Kasa->banknot20 > 0)
+  {
+    reszta_dla_klienta -= 20;
+    Kasa->banknot20--;
+    reszta[1]++;
+  }
+
+  // Wydawanie banknotów 10 zł
+  while (reszta_dla_klienta >= 10 && Kasa->banknot10 > 0)
+  {
+    reszta_dla_klienta -= 10;
+    Kasa->banknot10--;
+    reszta[2]++;
+  }
+
+  if (reszta_dla_klienta > 0)
+  {
+    printf("[ kasa ] zabrakło banknotów w kasie.");
+    return reszta_dla_klienta; // Zwraca niewydaną resztę
+  }
+  else
+  {
+    printf("[ kasa ] Można wydać resztę\n");
+    return 0; // Zwraca 0, jeśli resztę można wydać poprawnie
+  }
 }
