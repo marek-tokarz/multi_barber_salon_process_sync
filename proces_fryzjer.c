@@ -45,7 +45,7 @@ int main(void)
 
     int liczba_zabranych_z_poczekalni = 0;
 
-    while (liczba_prob_sprawdzenia_poczekalni < 10) // pętla odbioru komunikatów
+    while (liczba_prob_sprawdzenia_poczekalni < 100) // pętla odbioru komunikatów
     {
         waitSemafor(semID_shm, 0, SEM_UNDO); // CZEKAJ NA SEMAFORZE 0
 
@@ -93,7 +93,7 @@ int main(void)
             }
             else
             {
-                printf("[ fryzjer %d] wysłał potw., że będzie obsługiwać klienta\n", getpid());
+               // printf("[ fryzjer %d] wysłał potw., że będzie obsługiwać klienta\n", getpid());
             }
 
             // płatność z góry
@@ -122,7 +122,7 @@ int main(void)
                 }
                 else
                 {
-                    printf("[ fryzjer %d] otrzymał płatność od: %d\n", getpid(), pid_klienta);
+                    // printf("[ fryzjer %d] otrzymał płatność od: %d\n", getpid(), pid_klienta);
                     prosby_o_platnosc_z_gory = 6; // ZAKOŃCZ PĘTLĘ czekania na płatność
                     dokonano_platnosci = 1;
                 }
@@ -141,9 +141,9 @@ int main(void)
 
             if (waitSemafor(semID_fotel, 0, 0) == 1)
             {
-                printf("[ fryzjer %d] mam fotel\n", pid_fryzjera);
+                // printf("[ fryzjer %d] mam fotel\n", pid_fryzjera);
                 usleep(10); // Symulacja użycia zasobu
-                printf("[ fryzjer %d] zwalniam fotel\n", pid_fryzjera);
+                // printf("[ fryzjer %d] zwalniam fotel\n", pid_fryzjera);
                 signalSemafor(semID_fotel, 0);
             }
         }

@@ -3,6 +3,8 @@
 int main()
 {
 
+    // SEMAFOR GLOBALNY
+
     int semID_glob; // numer semafora globalnego
     int N = 5;      // liczba semaforow (na razie wykorzystywane '0' i '1')
 
@@ -34,6 +36,8 @@ int main()
         exit(1);
     }
 
+    // KOLEJKA KOMUNIKATÓW klient <-> poczekalnia
+
     int msqid;
     struct msqid_ds buf_info; // do pozyskiwania info o ilości kom. w kolejce
     // MESSAGE buf;              // komunikat do i z poczekalni
@@ -52,15 +56,20 @@ int main()
     // przypadkowo była pusta, bo klienci nic nie wysłali
     int liczba_przyjętych_do_poczekalni = 0;
 
-    if (msgctl(msqid, IPC_STAT, &buf_info) == -1) // sprawdzanie stanu kolejki
+    int podniesiono_semafor_globalny_nr_1 = 0;
+    while(podniesiono_semafor_globalny_nr_1 == 0)
     {
-        perror("msgctl");
-        return 1;
-    }
+        if (msgctl(msqid, IPC_STAT, &buf_info) == -1) // sprawdzanie stanu kolejki
+        {
+            perror("msgctl");
+            return 1;
+        }
 
-    if (buf_info.msg_qnum > 1) // sprawdzenie kolejki - w szczególności ilość kom.
-    {
-        signalSemafor(semID_glob, 1); // PODNIEŚ SEMAFOR 1 - dla fryzjerów
+        if (buf_info.msg_qnum > 1) // sprawdzenie kolejki - w szczególności ilość kom.
+        {
+            signalSemafor(semID_glob, 1); // PODNIEŚ SEMAFOR 1 - dla fryzjerów
+            podniesiono_semafor_globalny_nr_1 = 1; // ZAKOŃCZ PĘTLĘ
+        }
     }
 
     while (liczba_prob_odbioru_nieudanego < 1000) // pętla odbioru komunikatów

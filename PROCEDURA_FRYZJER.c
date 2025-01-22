@@ -25,6 +25,8 @@ int main(void)
 
     semID = alokujSemafor(KEY_GLOB_SEM, N, IPC_CREAT | 0666);
 
+    // printf("Czekam na semaforze nr 1\n");
+
     waitSemafor(semID, 1, SEM_UNDO); // CZEKAJ NA SEMAFORZE 1
 
     // SEMAFOR FOTELI

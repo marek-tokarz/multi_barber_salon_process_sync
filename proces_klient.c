@@ -64,11 +64,21 @@ int main(void)
 
      int a = 0; // do przerwania pętli cyklu: praca -> fryzjer -> praca -> praca ...
 
+     int czas_miedzy_zapytaniami;
+
      while (a < LICZBA_ZAPYTAN_KLIENTA)
      {
-          // SYMULACJA PRACY KLIENTA i ZARABIANIA PIENIĘDZY - LOSOWE KWOTY
-
           srand((my_pid + a));
+
+          // należy zasymulować losowy czas między zapytniami od poczekalnię
+
+          czas_miedzy_zapytaniami = (rand() % 10);
+
+          // printf("czas_miedzy_zapytaniami %d\n",czas_miedzy_zapytaniami);
+
+          usleep(czas_miedzy_zapytaniami); // częstotliwość wysyłania komunikatów
+
+          // SYMULACJA PRACY KLIENTA i ZARABIANIA PIENIĘDZY - LOSOWE KWOTY
 
           portfel.banknot50 += rand() % 3;  // Maksymalnie 2 banknoty 50 zł
           portfel.banknot20 += rand() % 6;  // Maksymalnie 5 banknotów 20 zł
@@ -92,9 +102,7 @@ int main(void)
           else
           {
                // printf("Proces %d wysłał swój PID do kolejki.\n", my_pid);
-          }
-
-          usleep(100); // częstotliwość wysyłania komunikatów
+          }       
 
           // Oczekiwanie na odpowiedź
           if (msgrcv(msqid_wait_room, &buf, sizeof(buf), my_pid, 0) == -1)
@@ -124,7 +132,7 @@ int main(void)
                     }
                     else
                     {
-                        printf("[ klient %d] otrzymał potw., że będzie obsługiwany\n", getpid());
+                        // printf("[ klient %d] otrzymał potw., że będzie obsługiwany\n", getpid());
                     }
 
                     struct pay Platnosc_z_gory;
@@ -144,7 +152,7 @@ int main(void)
                     }
                     else
                     {
-                         printf("[ klient %d] wysłał płatność z góry.\n", my_pid);
+                        //  printf("[ klient %d] wysłał płatność z góry.\n", my_pid);
                     }
                }
 
