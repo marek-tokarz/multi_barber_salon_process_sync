@@ -86,6 +86,8 @@ int main(void)
             obsluga.mtype = pid_klienta;
             obsluga.fryzjer_PID = pid_fryzjera;
 
+            // poinformowanie klienta odebranego z poczekalni, że będzie
+            // obsługiwany przez danego fryzjera
             if (msgsnd(msqid_pay, &obsluga, 7 * sizeof(int), 0) == -1)
             {
                 perror("msgsnd - fryzjera - obsługa klienta");
@@ -93,20 +95,15 @@ int main(void)
             }
             else
             {
-               // printf("[ fryzjer %d] wysłał potw., że będzie obsługiwać klienta\n", getpid());
+                // printf("[ fryzjer %d] wysłał potw., że będzie obsługiwać klienta\n", getpid());
             }
 
             // płatność z góry
-
             struct pay platnosc; // platnosc od klienta
 
             // printf("Czekam na płatność od klienta: %d \n",pid_klienta_do_obslugi);
 
             int prosby_o_platnosc_z_gory = 0;
-
-            // POTRZEBNY MECHANIZM WYSYŁANIA WIADOMOŚCI DO KLIENTA
-            // ŻE BĘDZIE OBSŁUGIWANY - W PRZECIWNYM WYPADKU
-            // PŁACI Z GÓRY OD RAZU JAK SIĘ DOSTANIE DO POCZEKALNI
 
             int dokonano_platnosci = 0;
 
@@ -136,15 +133,21 @@ int main(void)
             {
                 printf("Klient nie zapłacił\n");
             }
-
-            // SEMAFOR FOTELA
-
-            if (waitSemafor(semID_fotel, 0, 0) == 1)
+            else
             {
-                // printf("[ fryzjer %d] mam fotel\n", pid_fryzjera);
-                usleep(10); // Symulacja użycia zasobu
-                // printf("[ fryzjer %d] zwalniam fotel\n", pid_fryzjera);
-                signalSemafor(semID_fotel, 0);
+                // FRYZJER OTRZYMAŁ KWOTĘ/BANKNOTY:
+                // printf("Płatność - banknoty 50 zł: %d\n",platnosc.banknoty[0]);
+                // printf("Płatność - banknoty 20 zł: %d\n",platnosc.banknoty[1]);
+                // printf("Płatność - banknoty 10 zł: %d\n",platnosc.banknoty[2]);
+
+                // SEMAFOR FOTELA - semafor liczący
+                if (waitSemafor(semID_fotel, 0, 0) == 1)
+                {
+                    // printf("[ fryzjer %d] mam fotel\n", pid_fryzjera);
+                    usleep(10); // Symulacja użycia zasobu
+                    // printf("[ fryzjer %d] zwalniam fotel\n", pid_fryzjera);
+                    signalSemafor(semID_fotel, 0);
+                }
             }
         }
 

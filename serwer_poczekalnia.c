@@ -36,6 +36,20 @@ int main()
         exit(1);
     }
 
+    // POCZEKALNIA PRZED PRZYBYCIEM KLIENTÓW
+    /*
+    waitSemafor(semID_shm, 0, SEM_UNDO);
+    shm->counter = 0;
+    printf("Liczba zapisanych PID-ów: %d\n", shm->counter);
+    printf("Zapisane PID-y:");
+    for (int i = 0; i < MAX_PIDS; i++)
+    {
+        printf(" %d", (int)shm->pids[i]);
+    }
+    printf("\n");
+    signalSemafor(semID_shm, 0);
+    */
+
     // KOLEJKA KOMUNIKATÓW klient <-> poczekalnia
 
     int msqid;
@@ -163,13 +177,15 @@ int main()
 
     printf("\nLICZBA PRZYJĘTYCH DO POCZEKALNI: %d\n", liczba_przyjętych_do_poczekalni);
 
-    printf("Liczba zapisanych PID-ów: %d\n", shm->counter);
-    printf("Zapisane PID-y:");
+    waitSemafor(semID_shm, 0, SEM_UNDO);
+    printf("Liczba klientów w poczekalni po zakończeniu obsługi: %d\n", shm->counter);
+    printf("PID-y: klientów");
     for (int i = 0; i < shm->counter; i++)
     {
         printf(" %d", (int)shm->pids[i]);
     }
     printf("\n");
+    signalSemafor(semID_shm, 0);
 
     msgctl(msqid, IPC_RMID, NULL); // usunięcie kolejki komunikatów
     shmctl(shmid, IPC_RMID, NULL); // usunięcie pamięci współdzielonej

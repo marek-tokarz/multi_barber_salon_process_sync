@@ -104,7 +104,7 @@ int main(void)
                // printf("Proces %d wysłał swój PID do kolejki.\n", my_pid);
           }       
 
-          // Oczekiwanie na odpowiedź
+          // Oczekiwanie na odpowiedź - KLIENT MUSI WIDZIEĆ CZY MA MIEJSCE W POCZEKALNI
           if (msgrcv(msqid_wait_room, &buf, sizeof(buf), my_pid, 0) == -1)
           {
                perror("msgrcv - klient_proces - zapytanie do poczekalni");
@@ -125,6 +125,8 @@ int main(void)
 
                     struct pay obsluga;
 
+                    // Oczekiwanie na odpowiedź - PO WEJŚCIU DO POCZEKALNI KLIENT 
+                    // MUSI WIEDZIEĆ CZY MA FRYZJERA DO OBSŁUGI
                     if (msgrcv(msqid_pay, &obsluga, 7*sizeof(int), my_pid, 0) == -1)
                     {
                          perror("msgrcv - klient - potw. obsługi przez fryzjera\n");
@@ -135,8 +137,8 @@ int main(void)
                         // printf("[ klient %d] otrzymał potw., że będzie obsługiwany\n", getpid());
                     }
 
+                    // KLIENT WIE, ŻE JEST OBSŁUGIWANY - ma fryzjera - WIĘC PŁACI Z GÓRY
                     struct pay Platnosc_z_gory;
-
 
                     Platnosc_z_gory.mtype = obsluga.fryzjer_PID;
                     // 160 zl

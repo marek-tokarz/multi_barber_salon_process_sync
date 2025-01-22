@@ -32,6 +32,7 @@
 
 // KOLEJKA DWUSTRONNA
 #define MSG_KEY_PAY 9753 // klucz kolejki komunikatów do płacenia z góry przez klienta
+						 // oraz do informowania klienta, że będie obsługiwany
 
 #define SHM_KEY 12345  // Klucz do segmentu pamięci współdzielonej
                        // miejsce na zapisywanie PIDów klientów, 
@@ -39,6 +40,15 @@
 // SCHEMAT DZIAŁANIA PAMIĘCI NA SAMYM DOLE, POD '#endif // HEADER_FILE'
 
 #define MAX_PIDS 6    // Maksymalna liczba PID-ów - pojemność poczekalni
+
+// KOLEJKA JEDNOSTRONNA
+#define MSG_KEY_CASH 7531	// Klucz do kolejki komunikatów od fryzjera do kasy
+						// czyli do przekazania opłaty klienta i poinformowania 
+						// o reszczie dla niego
+
+// KOLEJKA JEDNOSTRONNA
+#define MSG_KEY_CHANGE 7531	// Klucz do kolejki komunikatów od kasy do klienta
+						// czyli wydanie reszty z kasy
 
 /* NIE DZIAŁA
 #define LICZBA_KLIENTOW 10
@@ -59,7 +69,7 @@ typedef struct {
     int counter; // Licznik osób w poczekalni
 }SharedMemory;
 
-// Struktura danych - 'portfel' klienta
+// Struktura danych - 'portfel' klienta i kasa
 typedef struct {
     int banknot50;
     int banknot20;
