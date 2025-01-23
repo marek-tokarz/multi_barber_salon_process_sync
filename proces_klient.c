@@ -49,6 +49,19 @@ int main(void)
           exit(1);
      }
 
+     // UZYSKIWANIE DOSTĘPU DO KOLEJKI KOMUNIKATÓW kasa -> klient
+     // reszta do wydania dla klienta przez kasę
+     // (lub ewentualnie informacja, że jej nie ma - bo wtedy
+     // proces klient utkwi na msgrcv)
+
+     int msqid_change;
+
+     if ((msqid_change = msgget(MSG_KEY_CHANGE, 0666 | IPC_CREAT)) == -1)
+     {
+          perror("msgget - change");
+          exit(1);
+     }
+
      // PIERWSZY KOMUNIKAT, by można było uruchomić serwer poczekalni
 
      buf.mtype = SERVER; // Ustawiamy 1 jako typ wiadomości - do serwera
@@ -105,7 +118,7 @@ int main(void)
           else
           {
                // printf("Proces %d wysłał swój PID do kolejki.\n", my_pid);
-          }       
+          }
 
           // Oczekiwanie na odpowiedź - KLIENT MUSI WIDZIEĆ CZY MA MIEJSCE W POCZEKALNI
           if (msgrcv(msqid_wait_room, &buf, sizeof(buf), my_pid, 0) == -1)
@@ -128,16 +141,16 @@ int main(void)
 
                     struct pay obsluga;
 
-                    // Oczekiwanie na odpowiedź - PO WEJŚCIU DO POCZEKALNI KLIENT 
+                    // Oczekiwanie na odpowiedź - PO WEJŚCIU DO POCZEKALNI KLIENT
                     // MUSI WIEDZIEĆ CZY MA FRYZJERA DO OBSŁUGI
-                    if (msgrcv(msqid_pay, &obsluga, 7*sizeof(int), my_pid, 0) == -1)
+                    if (msgrcv(msqid_pay, &obsluga, 7 * sizeof(int), my_pid, 0) == -1)
                     {
                          perror("msgrcv - klient - potw. obsługi przez fryzjera\n");
                          exit(1);
                     }
                     else
                     {
-                        // printf("[ klient %d] otrzymał potw., że będzie obsługiwany\n", getpid());
+                         // printf("[ klient %d] otrzymał potw., że będzie obsługiwany\n", getpid());
                     }
 
                     // KLIENT WIE, ŻE JEST OBSŁUGIWANY - ma fryzjera - WIĘC PŁACI Z GÓRY
@@ -149,15 +162,25 @@ int main(void)
                     Platnosc_z_gory.banknoty[0] = 3;
                     Platnosc_z_gory.banknoty[1] = 0;
                     Platnosc_z_gory.banknoty[2] = 0;
-     
-                    if (msgsnd(msqid_pay, &Platnosc_z_gory, 7*sizeof(int), 0) == -1)
+
+                    if (msgsnd(msqid_pay, &Platnosc_z_gory, 7 * sizeof(int), 0) == -1)
                     {
                          perror("msgsnd - klient_proces - platnosc_z_gory\n");
                          exit(1);
                     }
                     else
                     {
-                        //  printf("[ klient %d] wysłał płatność z góry.\n", my_pid);
+                         struct change wydanie_reszty;
+
+                         if (msgrcv(msqid_change, &wydanie_reszty, 5 * sizeof(int), my_pid, 0) == -1)
+                         {
+                              perror("msgrcv - klient - reszta\n");
+                              exit(1);
+                         }
+                         else
+                         {
+                              printf("[ klient %d] otrzymał resztę\n", getpid());
+                         }    
                     }
                }
 

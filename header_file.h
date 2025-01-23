@@ -18,11 +18,15 @@
 #include <semaphore.h>
 #include <pthread.h>
 
+// # # # SEMAFORY
+
 #define KEY_GLOB_SEM 1234 // klucz do globalnego semafora chronologii
 
 #define KEY_SHM_SEM 2468 // klucz do semafora dostępu do pamięci dzielonej
 
 #define KEY_FOTEL_SEM 3456 // klucz do semafora fotel
+
+// # # # KOLEJKI KOMUNIKATÓW
 
 // KOLEJKA DWUSTRONNA
 #define MSG_KEY_WAIT_ROOM 67890  // Klucz do kolejki komunikatów - wysyłanie 
@@ -53,19 +57,6 @@ struct pay {
 	// SUMA BAJTÓW: 28 (7 x int)
 };
 
-#define SHM_KEY 12345  // Klucz do segmentu pamięci współdzielonej
-                       // miejsce na zapisywanie PIDów klientów, 
-                       // ktorzy weszli do poczekalni
-// SCHEMAT DZIAŁANIA PAMIĘCI NA SAMYM DOLE, POD '#endif // HEADER_FILE'
-
-#define MAX_PIDS 3    // Maksymalna liczba PID-ów - pojemność poczekalni
-
-// Struktura danych do przechowywania PID-ów
-typedef struct {
-    pid_t pids[MAX_PIDS]; // tablica PIDów klientów w poczekalni
-    int counter; // Licznik osób w poczekalni
-}SharedMemory;
-
 // KOLEJKA JEDNOSTRONNA
 #define MSG_KEY_CASH 7531	// Klucz do kolejki komunikatów od fryzjera do kasy
 						// czyli do przekazania opłaty klienta i poinformowania 
@@ -84,12 +75,31 @@ struct cash {
 // KOLEJKA JEDNOSTRONNA
 #define MSG_KEY_CHANGE 5382	// Klucz do kolejki komunikatów od kasy do klienta
 						    // czyli wydanie reszty z kasy
-
-struct change {
+struct change { 		
     long mtype;       // Typ komunikatu
+	int klient_PID;
 	int banknoty[3];
-	// SUMA BAJTÓW: 8 (2 x int)
+	// SUMA BAJTÓW: 20 (5 x int)
 };
+// struktura analogiczna i podobna jak wyżej, ale dla rozróżnienia i czytelności kodu
+// wprowadzona ponownie pod inną nazwą
+
+
+// # # # PAMIĘĆ DZIELONA
+
+#define SHM_KEY 12345  // Klucz do segmentu pamięci współdzielonej
+                       // miejsce na zapisywanie PIDów klientów, 
+                       // ktorzy weszli do poczekalni
+// SCHEMAT DZIAŁANIA PAMIĘCI NA SAMYM DOLE, POD '#endif // HEADER_FILE'
+
+#define MAX_PIDS 3    // Maksymalna liczba PID-ów - pojemność poczekalni
+
+// Struktura danych do przechowywania PID-ów
+typedef struct {
+    pid_t pids[MAX_PIDS]; // tablica PIDów klientów w poczekalni
+    int counter; // Licznik osób w poczekalni
+}SharedMemory;
+
 
 /* NIE DZIAŁA
 #define LICZBA_KLIENTOW 10

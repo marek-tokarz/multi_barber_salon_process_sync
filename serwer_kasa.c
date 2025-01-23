@@ -55,6 +55,19 @@ int main(void)
     exit(1);
   }
 
+  // UZYSKIWANIE DOSTĘPU DO KOLEJKI KOMUNIKATÓW kasa -> klient
+  // reszta do wydania dla klienta przez kasę 
+  // (lub ewentualnie informacja, że jej nie ma - bo wtedy 
+  // proces klient utkwi na msgrcv)
+
+  int msqid_change;
+
+  if ((msqid_change = msgget(MSG_KEY_CHANGE, 0666 | IPC_CREAT)) == -1)
+  {
+    perror("msgget - change");
+    exit(1);
+  }
+
   Banknoty KASA = {10, 10, 10};
 
   int transakcje = 0;
@@ -77,6 +90,10 @@ int main(void)
   int wplaty_od_klientow = 0;
 
   int dotarla_gotowka = 0;
+
+  int reszta_0_zl = 0;
+
+  int reszta_faktyczna = 0;
 
   while (transakcje < LICZBA_TRANSAKCJI)
   {
@@ -121,13 +138,51 @@ int main(void)
 
       // sprawdz_reszte();
 
-      if (klient_wplacil.reszta_dla_klienta == 0)
+      struct change wydanie_reszty;
+
+      // TRZEBA NAJPIERW POPRAWNIE PRZYPISAĆ WARTOŚCI DO wydanie_reszty
+
+      wydanie_reszty.mtype = klient_wplacil.klient_PID;
+      // wydanie_reszty.banknoty[0] = 
+      // wydanie_reszty.banknoty[1] = 
+      // wydanie_reszty.banknoty[2] = 
+
+      if (klient_wplacil.reszta_dla_klienta == 0) // JEŚLI RESZTY NIE MA ( 0 ZŁ )
       {
-        // WYŚLIJ 0 ZŁ DO KLIENTA, PONIEWAŻ CZEKA NA msgrcv
+        if (msgsnd(msqid_change, &wydanie_reszty, 5 * sizeof(int), 0) == -1)
+                    {
+                         perror("msgsnd - klient_proces - platnosc_z_gory\n");
+                         exit(1);
+                    }
+                    else
+                    {
+                         // printf("[ kasa ] wysłała resztę ' 0 ZŁ ' dla klienta.\n");
+                         reszta_0_zl++;
+                    }
       }
-      else
+      else // JEŚLI RESZTA JEST ( reszta > 0 ZŁ)
       {
-        sprawdz_czy_jest_reszta(klient_wplacil.reszta_dla_klienta, &KASA);
+        int wynik_sprawdzenia = sprawdz_czy_jest_reszta(klient_wplacil.reszta_dla_klienta, &KASA);
+
+        if(wynik_sprawdzenia == 0) // JEŚLI RESZTĘ MOŻNA OD RAZU WYDAĆ
+        {
+          if (msgsnd(msqid_change, &wydanie_reszty, 5 * sizeof(int), 0) == -1)
+                    {
+                         perror("msgsnd - klient_proces - platnosc_z_gory\n");
+                         exit(1);
+                    }
+                    else
+                    {
+                         // printf("[ kasa ] wysłała resztę dla klienta.\n");
+                         reszta_faktyczna++;
+                    }
+
+        }
+        else // JEŚLI RESZTY NIE MOŻNA WYDAĆ, UTWÓRZ WĄTEK WYDAWANIA
+        {
+            printf("[ kasa ] - brak reszty w kasie, uruchamiama wątek\n");
+            // pthread_create()
+        }
       }
     }
 
@@ -144,6 +199,9 @@ int main(void)
   }
 
   printf("[ kasa ] wpłaty od klientów - łącznie wpłat: %d\n", wplaty_od_klientow);
+  printf("[ kasa ] RESZTY:\n");
+  printf("[ kasa ] reszta 0 zl: %d\n",reszta_0_zl);
+  printf("[ kasa ] reszta faktyczna: %d\n",reszta_faktyczna);
 
   return 0;
 }
@@ -183,7 +241,7 @@ int sprawdz_czy_jest_reszta(int reszta_dla_klienta, Banknoty *Kasa)
   }
   else
   {
-    printf("[ kasa ] Można wydać resztę\n");
+    // printf("[ kasa ] Można wydać resztę\n");
     return 0; // Zwraca 0, jeśli resztę można wydać poprawnie
   }
 }
