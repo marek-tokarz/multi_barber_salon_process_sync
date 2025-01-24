@@ -4,9 +4,9 @@ int main(void)
 {
     printf("[PROCEDURA FRYZJER]\n");
 
-    int LICZBA_FOTELI = 1;
+    int LICZBA_FOTELI = 2;
 
-    int LICZBA_FRYZJEROW = 2;
+    int LICZBA_FRYZJEROW = 4;
 
     // UZYSKIWANIE DOSTĘPU DO KOLEJKI KOMUNIKATÓW płatność z góry
     // TYLKO DO CELU JEJ USUNIĘCIA, GDY ZNIKNĄ fryzjerzy

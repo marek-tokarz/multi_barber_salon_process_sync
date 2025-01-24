@@ -4,11 +4,17 @@ int main(void)
 {
      printf("[ klient %d] proces uruchomiony \n", getpid());
 
-     int ZAPLATA_Z_GORY_50_ZL = 4;
-     int ZAPLATA_Z_GORY_20_ZL = 0;
-     int ZAPLATA_Z_GORY_10_ZL = 0;
+     // Pobierz ID procesu
+     pid_t my_pid = getpid(); // do srand() i do buf.pid
 
-     int LICZBA_ZAPYTAN_KLIENTA = 4; // + jedno zapytanie do uwolnienia semafora
+     // Zainicjalizuj generator liczb losowych za pomocą ID procesu
+     srand(my_pid);
+
+     int ZAPLATA_Z_GORY_50_ZL = 4;
+     int ZAPLATA_Z_GORY_20_ZL = (rand() % 2);
+     int ZAPLATA_Z_GORY_10_ZL = (rand() % 2);
+
+     int LICZBA_ZAPYTAN_KLIENTA = 1; // + jedno zapytanie do uwolnienia semafora
 
      // SEMAFOR GLOBALNY DO CHRONOLOGII
 
@@ -18,12 +24,6 @@ int main(void)
 
      // Inicjalizacja portfela
      Banknoty portfel = {1, 2, 1}; // 100 zl
-
-     // Pobierz ID procesu
-     pid_t my_pid = getpid(); // do srand() i do buf.pid
-
-     // Zainicjalizuj generator liczb losowych za pomocą ID procesu
-     srand(my_pid);
 
      // UZYSKIWANIE DOSTĘPU DO KOLEJKI KOMUNIKATÓW płatność z góry i potw. obsługi
 
@@ -179,11 +179,14 @@ int main(void)
                          }
                          else
                          {
-                              printf("[ klient %d] otrzymał resztę\n", getpid());
-                              printf("[ klient ] Reszta:\n");
-                              printf("[ klient ] 50 zl *:%d\n",wydanie_reszty.banknoty[0]);
-                              printf("[ klient ] 20 zl *:%d\n",wydanie_reszty.banknoty[1]);
-                              printf("[ klient ] 10 zl *:%d\n",wydanie_reszty.banknoty[2]);
+                              int reszta_u_klienta = wydanie_reszty.banknoty[0]*50 + wydanie_reszty.banknoty[1]*20 + wydanie_reszty.banknoty[2]*10;
+                              printf("[ klient %d] otrzymał resztę: %d\n", getpid(),reszta_u_klienta);
+                              //printf("[ klient ] Reszta:\n");
+                              //printf("[ klient ] 50 zl *:%d\n",wydanie_reszty.banknoty[0]);
+                              //printf("[ klient ] 20 zl *:%d\n",wydanie_reszty.banknoty[1]);
+                              //printf("[ klient ] 10 zl *:%d\n",wydanie_reszty.banknoty[2]);
+
+                              // NALEŻY DODAĆ RESZTĘ DO PORTFELU KLIENTA
                          }    
                     }
                }

@@ -96,13 +96,16 @@ int main()
             // perror("msgrcv - server");
             // zwracało - msgrcv - server: No message of desired type
             liczba_prob_odbioru_nieudanego++;
-            usleep(20); // ZWOLNIJ CZEKAJĄC NA KOMUNIKAT W KOLEJCE NIM ZAKOŃCZYSZ PĘTLĘ
+            // printf("[ poczekalnia ] liczba_prob_odbioru_nieudanego: %d\n",liczba_prob_odbioru_nieudanego)
+            usleep(10); // ZWOLNIJ CZEKAJĄC NA KOMUNIKAT W KOLEJCE NIM ZAKOŃCZYSZ PĘTLĘ
             // nie odebrano pożądanego komunikat, nie rób nic, kontynuuj
             // 1000 razy bez pożądanego komuniaktu i pętla się zakończy
         }
         else
         {
             odebrane_komunikaty++; // do zsumowania odebranych komunikatów
+            printf("[ poczekalnia ] odebrane_komunikaty: %d\n",odebrane_komunikaty);
+            
         }
 
         pid_t sender_pid = buf.pid; // Pobieramy PID nadawcy z mtype
@@ -158,7 +161,7 @@ int main()
         // albo logika procesu klienta uniemożliwi wysyłanie kolejnego komunikatu
         // jeśli już jest w kolejce w poczekalni
 
-        usleep(80); // częstotliwość odbierania komunikatów
+        usleep(10); // częstotliwość odbierania komunikatów
 
         /*  RACZEJ ZBĘDNĘ, PĘTLĘ KOŃCZY ZMIENNA: liczba_prob_odbioru_nieudanego
         if (msgctl(msqid, IPC_STAT, &buf_info) == -1) // sprawdzanie stanu kolejki

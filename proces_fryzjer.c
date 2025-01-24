@@ -6,7 +6,11 @@ int main(void)
 
     int pid_fryzjera = getpid();
 
-    int KOSZT_OBSLUGI = 140;
+    srand(pid_fryzjera);
+
+    int KOSZT_OBSLUGI = (190 - (20*(rand()%2))  - (10*(rand()%2)));
+
+    printf("KOSZT_OBSLUGI %d\n",KOSZT_OBSLUGI);
 
     // SEMAFOR FOTELI
 
@@ -138,10 +142,8 @@ int main(void)
                     dokonano_platnosci = 1;
                 }
 
-                usleep(50);
+                usleep(10);
             }
-
-            
 
             prosby_o_platnosc_z_gory = 0; // by w kolejnych programach czekać na płatność
 
@@ -209,7 +211,7 @@ int main(void)
 
         liczba_prob_sprawdzenia_poczekalni++;
 
-        usleep(200); // częstotliwość sprawdzania poczekalnia
+        usleep(10); // częstotliwość sprawdzania poczekalnia
     }
 
     shmdt(shm); // Odłączamy pamięć współdzieloną
