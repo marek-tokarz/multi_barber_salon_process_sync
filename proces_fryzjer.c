@@ -6,7 +6,7 @@ int main(void)
 
     int pid_fryzjera = getpid();
 
-    int KOSZT_OBSLUGI = 120;
+    int KOSZT_OBSLUGI = 140;
 
     // SEMAFOR FOTELI
 
@@ -179,6 +179,7 @@ int main(void)
                 zaplata_reszta.mtype = CASH_REGISTER;
                 zaplata_reszta.klient_PID = pid_klienta;
                 zaplata_reszta.reszta_dla_klienta = reszta_do_wydania;
+                zaplata_reszta.wplata_klienta = wplata_od_klienta;
                 zaplata_reszta.banknoty[0] = platnosc.banknoty[0];
                 zaplata_reszta.banknoty[1] = platnosc.banknoty[1];
                 zaplata_reszta.banknoty[2] = platnosc.banknoty[2];
@@ -192,7 +193,7 @@ int main(void)
                 printf("zaplata_reszta.banknoty[2] %d\n",zaplata_reszta.banknoty[2]);
                 */
 
-                if (msgsnd(msqid_cash, &zaplata_reszta, 5 * sizeof(int), 0) == -1)
+                if (msgsnd(msqid_cash, &zaplata_reszta, 6 * sizeof(int), 0) == -1)
                 {
                     perror("msgsnd - fryzjera - zaplata_reszta");
                     exit(1);

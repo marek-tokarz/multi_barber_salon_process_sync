@@ -68,8 +68,9 @@ struct cash {
     long mtype;       // Typ komunikatu
 	int klient_PID;
 	int reszta_dla_klienta;
+	int wplata_klienta;
 	int banknoty[3];
-	// SUMA BAJTÓW: 20 (5 x int)
+	// SUMA BAJTÓW: 24 (6 x int)
 };
 
 // KOLEJKA JEDNOSTRONNA
@@ -78,6 +79,7 @@ struct cash {
 struct change { 		
     long mtype;       // Typ komunikatu
 	int klient_PID;
+	int reszta;
 	int banknoty[3];
 	// SUMA BAJTÓW: 20 (5 x int)
 };

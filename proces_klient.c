@@ -4,7 +4,7 @@ int main(void)
 {
      printf("[ klient %d] proces uruchomiony \n", getpid());
 
-     int ZAPLATA_Z_GORY_50_ZL = 3;
+     int ZAPLATA_Z_GORY_50_ZL = 4;
      int ZAPLATA_Z_GORY_20_ZL = 0;
      int ZAPLATA_Z_GORY_10_ZL = 0;
 
@@ -152,16 +152,16 @@ int main(void)
                     {
                          // printf("[ klient %d] otrzymał potw., że będzie obsługiwany\n", getpid());
                     }
-
+                    //
                     // KLIENT WIE, ŻE JEST OBSŁUGIWANY - ma fryzjera - WIĘC PŁACI Z GÓRY
                     struct pay Platnosc_z_gory;
 
                     Platnosc_z_gory.mtype = obsluga.fryzjer_PID;
                     // 160 zl
 
-                    Platnosc_z_gory.banknoty[0] = 3;
-                    Platnosc_z_gory.banknoty[1] = 0;
-                    Platnosc_z_gory.banknoty[2] = 0;
+                    Platnosc_z_gory.banknoty[0] = ZAPLATA_Z_GORY_50_ZL;
+                    Platnosc_z_gory.banknoty[1] = ZAPLATA_Z_GORY_20_ZL;
+                    Platnosc_z_gory.banknoty[2] = ZAPLATA_Z_GORY_10_ZL;
 
                     if (msgsnd(msqid_pay, &Platnosc_z_gory, 7 * sizeof(int), 0) == -1)
                     {
@@ -172,7 +172,7 @@ int main(void)
                     {
                          struct change wydanie_reszty;
 
-                         if (msgrcv(msqid_change, &wydanie_reszty, 5 * sizeof(int), my_pid, 0) == -1)
+                         if (msgrcv(msqid_change, &wydanie_reszty, 6 * sizeof(int), my_pid, 0) == -1)
                          {
                               perror("msgrcv - klient - reszta\n");
                               exit(1);
@@ -180,6 +180,10 @@ int main(void)
                          else
                          {
                               printf("[ klient %d] otrzymał resztę\n", getpid());
+                              printf("[ klient ] Reszta:\n");
+                              printf("[ klient ] 50 zl *:%d\n",wydanie_reszty.banknoty[0]);
+                              printf("[ klient ] 20 zl *:%d\n",wydanie_reszty.banknoty[1]);
+                              printf("[ klient ] 10 zl *:%d\n",wydanie_reszty.banknoty[2]);
                          }    
                     }
                }
