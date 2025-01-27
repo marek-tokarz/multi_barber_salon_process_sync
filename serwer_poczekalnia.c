@@ -1,7 +1,37 @@
 #include "header_file.h"
 
+// do zakończenia głównej pętli sygnałem
+
+volatile sig_atomic_t keep_running = 1;
+
+void handle_sigusr1(int signum)
+{
+    if (signum == SIGUSR1)
+    {
+        keep_running = 0;
+        printf("[ poczekalnia ]: Otrzymano sygnał SIGUSR1 - KONIEC PĘTLI\n");
+    }
+}
+
 int main()
 {
+    // ODBIÓR SIGUSR1 i/lub SIGUSR2
+
+    // Rejestracja handlera dla sygnału SIGUSR1
+    struct sigaction sa_sigusr1;
+    sa_sigusr1.sa_handler = handle_sigusr1;
+    sigemptyset(&sa_sigusr1.sa_mask);
+    sa_sigusr1.sa_flags = SA_RESTART;
+    sigaction(SIGUSR1, &sa_sigusr1, NULL);
+
+    /*
+    // Rejestracja handlera dla sygnału SIGUSR2
+    struct sigaction sa_sigusr2;
+    sa_sigusr2.sa_handler = handle_sigusr2;
+    sigemptyset(&sa_sigusr2.sa_mask);
+    sa_sigusr2.sa_flags = 0;
+    sigaction(SIGUSR2, &sa_sigusr2, NULL);
+    */
 
     // SEMAFOR GLOBALNY
 

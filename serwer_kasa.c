@@ -7,6 +7,15 @@
 // ZAKŁADAM, ŻE PŁACĄ W KAŻDYM NOMINALE, BY UMOŻLIWIĆ PÓŹNIEJ WYDAWANIE,
 // NAWET JEŚLI KASA BYŁA NA POCZĄTKU PUSTA
 
+volatile sig_atomic_t keep_running = 1;
+
+void signal_handler(int signum) {
+    if (signum == SIGUSR1) {
+        keep_running = 0;
+        printf("[ kasa ]: Otrzymano sygnał SIGUSR1 - KONIEC PĘTLI\n");
+    }
+}
+
 int sprawdz_czy_jest_reszta(int reszta_dla_klienta, Banknoty *Kasa);
 void *watek_wydaje_reszte(void *arg);
 int *wydaj_reszte(int kwota_reszty, Banknoty *Kasa);
@@ -23,9 +32,28 @@ pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
 
 int msqid_change;
 
+int semID_kasa;
+
 int main(void)
 {
+  // ODBIÓR SIGUSR1
+
+    struct sigaction sa;
+    sa.sa_handler = signal_handler;
+    sigemptyset(&sa.sa_mask);
+    sa.sa_flags = SA_RESTART;
+    sigaction(SIGUSR1, &sa, NULL);
+
+
   int LICZBA_TRANSAKCJI = 10000000;
+
+  // SEMAFOR kasy - wpłaty i wydawanie reszty
+
+  int semID_kasa;
+ 
+  semID_kasa = alokujSemafor(KEY_SEM_KASA, 1, IPC_CREAT | 0666);
+
+  inicjalizujSemafor(semID_kasa, 0, 0);
 
   // SEMAFOR GLOBALNY do chronologii wstępnej
 
@@ -130,12 +158,12 @@ int main(void)
       pthread_cond_broadcast(&cond);
 
       // printf("[ kasa ] Do zwrotu klientowi: %d\n", klient_wplacil.reszta_dla_klienta);
-
       // SEMAFOR DOSTĘPU DO KASY
 
       KASA.banknot50 += klient_wplacil.banknoty[0];
       KASA.banknot20 += klient_wplacil.banknoty[1];
       KASA.banknot10 += klient_wplacil.banknoty[2];
+     
 
       struct change wydanie_reszty;
 

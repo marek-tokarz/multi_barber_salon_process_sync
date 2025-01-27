@@ -1,7 +1,17 @@
 #include "header_file.h"
 
-int main(void)
+int main(int argc, char *argv[])
 {
+
+    // CZAS OTWARCIA JAKO ARGUMENT
+
+    if (argc != 2)
+    {
+        fprintf(stderr, "Użycie: %s <ilość_sekund>\n", argv[0]);
+        exit(1);
+    }
+
+     int seconds = atoi(argv[1]);
 
     // SEMAFOR GLOBALNY DO CHRONOLOGII URUCHOMIENIA
 
@@ -103,6 +113,28 @@ int main(void)
     default:     // Proces macierzysty
         break;
     }
+
+    // PĘTLA WYZNACZAJĄCA CZAS DZIAŁANIA SALONU
+    // czas w sekundach 'n' jako argument: ./KASJER n
+
+    time_t start_time, current_time;
+
+    time(&start_time);
+
+    do 
+    {
+        time(&current_time);
+        usleep(1000000);
+    } while (difftime(current_time, start_time) < seconds);
+   
+
+    printf("[KASJER] zamykam kasę\n");
+    kill(serwer_kasa_pid, SIGUSR1);
+
+    printf("[KASJER] zamykam poczekalnię\n");
+    kill(serwer_poczekalnia_pid, SIGUSR1);
+
+    // ODBIERANIE STATUSÓW PROCESÓW POTOMNYCH i USUWANIE ZASOBÓW IPC
 
     int status;
     pid_t zakonczony_pid;

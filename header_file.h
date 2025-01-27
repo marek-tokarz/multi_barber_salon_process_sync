@@ -17,8 +17,11 @@
 #include <time.h>
 #include <semaphore.h>
 #include <pthread.h>
+#include <signal.h>
 
 // # # # SEMAFORY
+
+#define KEY_SEM_KASA 82641 // klucz do semafora kasy - wpłaty z góry i wypłaty reszty
 
 #define KEY_GLOB_SEM 1234 // klucz do globalnego semafora chronologii
 
