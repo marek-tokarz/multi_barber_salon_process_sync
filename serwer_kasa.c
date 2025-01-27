@@ -25,7 +25,7 @@ int msqid_change;
 
 int main(void)
 {
-  int LICZBA_TRANSAKCJI = 300;
+  int LICZBA_TRANSAKCJI = 10000000;
 
   // SEMAFOR GLOBALNY do chronologii wstępnej
 
@@ -33,6 +33,18 @@ int main(void)
   int N = 5;
 
   semID = alokujSemafor(KEY_GLOB_SEM, N, IPC_CREAT | 0666);
+
+  // UZYSKIWANIE DOSTĘPU DO KOLEJKI KOMUNIKATÓW płatność z góry
+  // TYLKO DO CELU JEJ USUNIĘCIA, GDY zniknie kasa - wtedy płatności klient -> fryzjer
+  // niemożlwe
+
+    int msqid_pay;
+
+    if ((msqid_pay = msgget(MSG_KEY_PAY, 0666 | IPC_CREAT)) == -1)
+    {
+        perror("msgget");
+        exit(1);
+    }
 
   // UZYSKIWANIE DOSTĘPU DO KOLEJKI KOMUNIKATÓW fryjer -> kasa
   // zapłata za usługę od klienta i reszta do wydania dla klienta przez kasę
@@ -62,10 +74,10 @@ int main(void)
 
   printf("[PROCEDURA serwer_kasa]\n");
 
-  printf("W Kasie jest:\n");
-  printf("banknoty 50 zl: %d\n", KASA.banknot50);
-  printf("banknoty 20 zl: %d\n", KASA.banknot20);
-  printf("banknoty 10 zl: %d\n", KASA.banknot10);
+  // printf("W Kasie jest:\n");
+  // printf("banknoty 50 zl: %d\n", KASA.banknot50);
+  // printf("banknoty 20 zl: %d\n", KASA.banknot20);
+  // printf("banknoty 10 zl: %d\n", KASA.banknot10);
 
   struct cash klient_wplacil; // do przyjmowania wpłat od klienta (za pośrednictwem fryzjera)
 
@@ -76,6 +88,8 @@ int main(void)
   int reszta_0_zl = 0;
 
   int reszta_faktyczna = 0;
+
+  int reszta_z_watku = 0;
 
   while (transakcje < LICZBA_TRANSAKCJI)
   {
@@ -90,7 +104,7 @@ int main(void)
       {
         // perror("msgrcv - kasa");
         sprawdzam_kolejke++;
-        usleep(10);
+        // usleep(10);
       }
       else
       {
@@ -99,13 +113,15 @@ int main(void)
         wplaty_od_klientow++;
         dotarla_gotowka = 1;
       }
-      usleep(50);
+      // usleep(50);
     }
 
     sprawdzam_kolejke = 0; // by w kolejnych obiegach pętli czekać na płatność
 
     if (dotarla_gotowka == 1)
     {
+
+      // printf("dotarła wpłata od klienta\n");
 
       // SYGNAŁ (ROZGŁOSZENIE - BROADCAST) DLA WĄTKÓW
 
@@ -171,9 +187,10 @@ int main(void)
         else // JEŚLI RESZTY NIE MOŻNA WYDAĆ, UTWÓRZ WĄTEK WYDAWANIA
         {
           // printf("[ kasa ] - brak reszty w kasie, uruchamiam wątek\n");
+          reszta_z_watku++;
           struct change wydaje_watek;
           wydaje_watek.mtype = klient_wplacil.klient_PID;
-          printf("Wysyłam do wątku PID klienta: %lu\n", wydaje_watek.mtype);
+          // printf("Wysyłam do wątku PID klienta: %lu\n", wydaje_watek.mtype);
           wydaje_watek.reszta = klient_wplacil.reszta_dla_klienta;
           // printf("Do watku wysyłam dane:\n");
           // printf("Reszta do wypłacenia %d:\n", wydaje_watek.reszta);
@@ -193,11 +210,13 @@ int main(void)
     dotarla_gotowka = 0; // zerowanie przed odbiorem kolejnej wiadomości od fryzjera
 
     // CZYSTO TESTOWE 'WZBOGACENIE KASY' BY SPRÓBOWAĆ ZAMKNĄĆ WĄTKI
-    // /*
-    KASA.banknot50 += 0;
-    KASA.banknot20 += 2;
-    KASA.banknot10 += 2;
-    // */
+    
+    // KASA.banknot50 += 0;
+    // KASA.banknot20 += 1;
+    // KASA.banknot10 += 1;
+
+    pthread_cond_broadcast(&cond);
+    
 
     transakcje++;
   }
@@ -213,21 +232,24 @@ int main(void)
   printf("[ kasa ] wpłaty od klientów - łącznie wpłat: %d\n", wplaty_od_klientow);
   printf("[ kasa ] RESZTY:\n");
   printf("[ kasa ] reszta 0 zl: %d\n", reszta_0_zl);
-  printf("[ kasa ] reszta od razu: %d\n", reszta_faktyczna);
-  printf("Reszty inne niż 0 zł wypłacił wątek\n");
+  printf("[ kasa ] reszta z kasy (bez wątku): %d\n", reszta_faktyczna);
+  printf("[ kasa: wątki] wypłaty reszty przez wątek: %d\n",reszta_z_watku);
 
+  msgctl(msqid_pay, IPC_RMID, NULL);
+  msgctl(msqid_change, IPC_RMID, NULL);
+  
   return 0;
 }
 
 void *watek_wydaje_reszte(void *arg) // FUNKCJA DLA WĄTKÓW
 {
   struct change *reszta_watek = (struct change *)arg;
-  // printf("Watek otrzymał: PID %ld, reszta %d\n", reszta_watek ->mtype, reszta_watek ->reszta);
+  printf("[watek] otrzymał: PID %ld, reszta %d\n", reszta_watek ->mtype, reszta_watek ->reszta);
   // semafor dostępu do KASY
 
-  printf("Do watku dotarły dane:\n");
-  printf("Reszta do wypłacenia: %d\n", reszta_watek->reszta);
-  printf("Adresat wypłaty: %lu\n", reszta_watek->mtype);
+  // printf("Do watku dotarły dane:\n");
+  // printf("Reszta do wypłacenia: %d\n", reszta_watek->reszta);
+  // printf("Adresat wypłaty: %lu\n", reszta_watek->mtype);
 
   pthread_mutex_lock(&mutex);
   int reszta_w_watku = reszta_watek->reszta;
@@ -235,7 +257,7 @@ void *watek_wydaje_reszte(void *arg) // FUNKCJA DLA WĄTKÓW
   while (czy_mozna_wydac == 1)
   {
     czy_mozna_wydac = sprawdz_czy_jest_reszta(reszta_w_watku, &KASA);
-     printf("\t[watek ] czekam na odpowiednie nominały\n");
+    //  printf("\t[watek ] czekam na odpowiednie nominały\n");
     pthread_cond_wait(&cond, &mutex);
   }
   // MOŻNA WYDAĆ RESZTĘ PRZEZ WĄTEK:
@@ -246,7 +268,7 @@ void *watek_wydaje_reszte(void *arg) // FUNKCJA DLA WĄTKÓW
 
   wydanie_reszty_watkiem.mtype = reszta_watek->mtype;
 
-  printf("[watek] będę wysyłać resztę do: %lu\n", wydanie_reszty_watkiem.mtype);
+  // printf("[watek] będę wysyłać resztę do: %lu\n", wydanie_reszty_watkiem.mtype);
 
   wydanie_reszty_watkiem.banknoty[0] = do_wydania[0];
   // printf("[watek] reszta, 50 zl: %d\n", wydanie_reszty_watkiem.banknoty[0]);
@@ -266,7 +288,7 @@ void *watek_wydaje_reszte(void *arg) // FUNKCJA DLA WĄTKÓW
   }
   else
   {
-    printf("[watek] wydał resztę \n");
+    // printf("[watek] wydał resztę \n");
   }
 }
 
@@ -315,7 +337,7 @@ int sprawdz_czy_jest_reszta(int reszta_dla_klienta, Banknoty *Kasa)
 int *wydaj_reszte(int kwota_reszty, Banknoty *Kasa) // WYDANIE RESZTY (USTALENIE NOMINAŁÓW)
 {
 
-  printf("Funkcja wydawania reszty, będę wydawać kwotę: %d\n", kwota_reszty);
+  // printf("Funkcja wydawania reszty, będę wydawać kwotę: %d\n", kwota_reszty);
 
   // Alokacja pamięci na tablicę
   int *do_wydania = (int *)malloc(3 * sizeof(int));

@@ -94,7 +94,7 @@ struct change {
                        // ktorzy weszli do poczekalni
 // SCHEMAT DZIAŁANIA PAMIĘCI NA SAMYM DOLE, POD '#endif // HEADER_FILE'
 
-#define MAX_PIDS 6    // Maksymalna liczba PID-ów - pojemność poczekalni
+#define MAX_PIDS 30    // Maksymalna liczba PID-ów - pojemność poczekalni
 
 // Struktura danych do przechowywania PID-ów
 typedef struct {

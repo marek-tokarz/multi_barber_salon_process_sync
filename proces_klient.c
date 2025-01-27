@@ -2,7 +2,7 @@
 
 int main(void)
 {
-     printf("[ klient %d] proces uruchomiony \n", getpid());
+     // printf("[ klient %d] proces uruchomiony \n", getpid());
 
      // Pobierz ID procesu
      pid_t my_pid = getpid(); // do srand() i do buf.pid
@@ -10,9 +10,9 @@ int main(void)
      // Zainicjalizuj generator liczb losowych za pomocą ID procesu
      srand(my_pid);
 
-     int ZAPLATA_Z_GORY_50_ZL = 4;
-     int ZAPLATA_Z_GORY_20_ZL = (rand() % 2);
-     int ZAPLATA_Z_GORY_10_ZL = (rand() % 2);
+     int ZAPLATA_Z_GORY_50_ZL = 1 + (rand() % 2);
+     int ZAPLATA_Z_GORY_20_ZL = 1 + (rand() % 2);
+     int ZAPLATA_Z_GORY_10_ZL = 1 + (rand() % 2);
 
      int LICZBA_ZAPYTAN_KLIENTA = 1; // + jedno zapytanie do uwolnienia semafora
 
@@ -69,7 +69,7 @@ int main(void)
      // wysłanie komunikatu
      if (msgsnd(msqid_wait_room, &buf, sizeof(buf), 0) == -1)
      {
-          perror("msgsnd - klient_proces");
+          perror("msgsnd - do poczekalni - klient_proces");
           exit(1);
      }
      else
@@ -92,7 +92,7 @@ int main(void)
 
           // printf("czas_miedzy_zapytaniami %d\n",czas_miedzy_zapytaniami);
 
-          usleep(czas_miedzy_zapytaniami); // częstotliwość wysyłania komunikatów
+          // usleep(czas_miedzy_zapytaniami); // częstotliwość wysyłania komunikatów
 
           // SYMULACJA PRACY KLIENTA i ZARABIANIA PIENIĘDZY - LOSOWE KWOTY
 
@@ -180,7 +180,7 @@ int main(void)
                          else
                          {
                               int reszta_u_klienta = wydanie_reszty.banknoty[0]*50 + wydanie_reszty.banknoty[1]*20 + wydanie_reszty.banknoty[2]*10;
-                              printf("[ klient %d] otrzymał resztę: %d\n", getpid(),reszta_u_klienta);
+                              // printf("[ klient %d] otrzymał resztę: %d\n", getpid(),reszta_u_klienta);
                               //printf("[ klient ] Reszta:\n");
                               //printf("[ klient ] 50 zl *:%d\n",wydanie_reszty.banknoty[0]);
                               //printf("[ klient ] 20 zl *:%d\n",wydanie_reszty.banknoty[1]);

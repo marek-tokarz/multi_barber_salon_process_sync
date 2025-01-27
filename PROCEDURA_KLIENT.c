@@ -4,7 +4,9 @@ int main(void)
 {
     printf("[PROCEDURA KLIENT]\n");
 
-    int LICZBA_KLIENTOW = 20;
+    // int LICZBA_KLIENTOW = 10000;
+    // int LICZBA_KLIENTOW = 1000;
+    int LICZBA_KLIENTOW = 100;
 
     int semID; // numer semafora globalnego
     int N = 5; // liczba semaforow (na razie wykoryzstywane '0' i '1') // dostęp do smeafora
@@ -52,6 +54,9 @@ int main(void)
         wait(NULL);
     }
 
+    signalSemafor(semID, 4); // DO KASJERA
+
+    return 0;
 }
 
 /*

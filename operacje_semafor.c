@@ -23,7 +23,6 @@ void inicjalizujSemafor(int semID, int number, int val)
    }
 }
 
-
 // CZEKAJ NA SEMAFORZE
 int waitSemafor(int semID, int number, int flags)
 {

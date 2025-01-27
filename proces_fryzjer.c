@@ -2,15 +2,20 @@
 
 int main(void)
 {
-    printf("[ fryzjer %d] proces uruchomiony\n", getpid());
+    // printf("[ fryzjer %d] proces uruchomiony\n", getpid());
 
     int pid_fryzjera = getpid();
 
     srand(pid_fryzjera);
 
-    int KOSZT_OBSLUGI = (190 - (20*(rand()%2))  - (10*(rand()%2)));
+    // int KOSZT_OBSLUGI = (190 - (20*(rand()%2))  - (10*(rand()%2)));
 
-    printf("KOSZT_OBSLUGI %d\n",KOSZT_OBSLUGI);
+    int KOSZT_OBSLUGI = 80;
+    // przy koszcie 70 zł uruchamiają się wątki do wypłacania
+    // ale problem z wydaniem pieniędzy się pogłębia i program się zatrzymuje
+    // i nie kończy prawidłowo
+
+    // printf("KOSZT_OBSLUGI %d\n",KOSZT_OBSLUGI);
 
     // SEMAFOR FOTELI
 
@@ -50,7 +55,7 @@ int main(void)
     shmid = shmget(SHM_KEY, sizeof(SharedMemory), IPC_CREAT | 0666);
     if (shmid == -1)
     {
-        perror("shmget");
+        perror("fryzjer shmget");
         exit(1);
     }
 
@@ -63,7 +68,7 @@ int main(void)
 
     int liczba_zabranych_z_poczekalni = 0;
 
-    while (liczba_prob_sprawdzenia_poczekalni < 100) // pętla odbioru komunikatów
+    while (liczba_prob_sprawdzenia_poczekalni < 100000) // pętla odbioru komunikatów
     {
         waitSemafor(semID_shm, 0, SEM_UNDO); // CZEKAJ NA SEMAFORZE 0
 
@@ -84,7 +89,7 @@ int main(void)
 
             liczba_zabranych_z_poczekalni++;
 
-            // printf("Klient o PID %d zabrany z poczekalnia.\n", pid_klienta_do_obslugi);
+            // printf("Klient o PID %d zabrany z poczekalnia.\n", pid_klienta);
         }
         else
         {
@@ -125,7 +130,9 @@ int main(void)
 
             int dokonano_platnosci = 0;
 
-            while (prosby_o_platnosc_z_gory < 5) // by nie czekać w nieskończoność na płatność
+            // PĘTLA ODBIORU PŁATNOŚCI
+            /*
+            while (prosby_o_platnosc_z_gory < 100) // by nie czekać w nieskończoność na płatność
             {                                    // czyli nie utkwić na msgrcv
 
                 // RACZEJ BEZ IPC_NOWAIT - fryzjer ma czekać na kasę od klienta
@@ -133,16 +140,31 @@ int main(void)
                 {
                     // perror("msgrcv - fryzjer");
                     prosby_o_platnosc_z_gory++;
-                    usleep(10);
+                    // usleep(10);
                 }
                 else
                 {
                     // printf("[ fryzjer %d] otrzymał płatność od: %d\n", getpid(), pid_klienta);
-                    prosby_o_platnosc_z_gory = 6; // ZAKOŃCZ PĘTLĘ czekania na płatność
+                    prosby_o_platnosc_z_gory = 11; // ZAKOŃCZ PĘTLĘ czekania na płatność
                     dokonano_platnosci = 1;
                 }
 
-                usleep(10);
+                // usleep(10);
+            }
+            */
+
+            if (msgrcv(msqid_pay, &platnosc, 7 * sizeof(int), pid_fryzjera, 0) == -1)
+            {
+                // perror("msgrcv - fryzjer");
+                //prosby_o_platnosc_z_gory++;
+                // usleep(10);
+                perror("msgrcv - fryzjer - płatność z góry od klienta");
+            }
+            else
+            {
+                // printf("[ fryzjer %d] otrzymał płatność od: %d\n", getpid(), pid_klienta);
+                // prosby_o_platnosc_z_gory = 11; // ZAKOŃCZ PĘTLĘ czekania na płatność
+                dokonano_platnosci = 1;
             }
 
             prosby_o_platnosc_z_gory = 0; // by w kolejnych programach czekać na płatność
@@ -164,7 +186,7 @@ int main(void)
                 if (waitSemafor(semID_fotel, 0, 0) == 1)
                 {
                     // printf("[ fryzjer %d] mam fotel\n", pid_fryzjera);
-                    usleep(10); // Symulacja użycia zasobu - fotela - strzyżenie
+                    // usleep(10); // Symulacja użycia zasobu - fotela - strzyżenie
                     // printf("[ fryzjer %d] zwalniam fotel\n", pid_fryzjera);
                     signalSemafor(semID_fotel, 0);
                 }
@@ -173,8 +195,8 @@ int main(void)
                 struct cash zaplata_reszta;
 
                 int reszta_do_wydania = 0;
-                int wplata_od_klienta = platnosc.banknoty[0]*50 + platnosc.banknoty[1]*20 + platnosc.banknoty[2]*10;
-                reszta_do_wydania = wplata_od_klienta - KOSZT_OBSLUGI;  
+                int wplata_od_klienta = platnosc.banknoty[0] * 50 + platnosc.banknoty[1] * 20 + platnosc.banknoty[2] * 10;
+                reszta_do_wydania = wplata_od_klienta - KOSZT_OBSLUGI;
 
                 // printf("Reszta wyliczona u fryzjera: %d\n",reszta_do_wydania);
 
@@ -211,7 +233,7 @@ int main(void)
 
         liczba_prob_sprawdzenia_poczekalni++;
 
-        usleep(10); // częstotliwość sprawdzania poczekalnia
+        // usleep(10); // częstotliwość sprawdzania poczekalni
     }
 
     shmdt(shm); // Odłączamy pamięć współdzieloną

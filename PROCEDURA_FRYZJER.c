@@ -4,10 +4,12 @@ int main(void)
 {
     printf("[PROCEDURA FRYZJER]\n");
 
-    int LICZBA_FOTELI = 2;
+    int LICZBA_FOTELI = 10;
 
-    int LICZBA_FRYZJEROW = 4;
-
+    //int LICZBA_FRYZJEROW = 1000;
+    int LICZBA_FRYZJEROW = 20;
+  
+    /*
     // UZYSKIWANIE DOSTĘPU DO KOLEJKI KOMUNIKATÓW płatność z góry
     // TYLKO DO CELU JEJ USUNIĘCIA, GDY ZNIKNĄ fryzjerzy
     int msqid_pay;
@@ -17,6 +19,7 @@ int main(void)
         perror("msgget");
         exit(1);
     }
+    */
 
     // SEMAFOR GLOBALNY do chronologii wstępnej
 
@@ -69,16 +72,7 @@ int main(void)
 
     printf("Fryzjerzy zakończyli pracę\n");
 
-    // Usuwanie kolejki po zniknięciu fryzjerów
-    msgctl(msqid_pay, IPC_RMID, NULL);
-
-    // Usuwanie semafora foteli
-
-    if (zwolnijSemafor(semID_fotel, 0) == -1) {
-        perror("Błąd zwolnijSemafor:");
-        exit(1);
-    }
-
+    signalSemafor(semID, 3); // DO KASJERA
 
     return 0;
 }
