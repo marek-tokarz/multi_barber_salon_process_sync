@@ -24,6 +24,22 @@ int main(void)
 {
     // printf("[ fryzjer %d] proces uruchomiony\n", getpid());
 
+    // blokowanie sygnałów, by odebrać je w pożądanym momencie:
+
+    sigset_t block_mask, old_mask;
+
+    // Utwórz maskę i dodaj SIGUSR1 i SIGUSR2
+    sigemptyset(&block_mask);
+    sigaddset(&block_mask, SIGUSR1);
+    sigaddset(&block_mask, SIGUSR2);
+
+    // Zablokuj sygnały od samego początku, zachowując poprzednią maskę
+    if (sigprocmask(SIG_BLOCK, &block_mask, &old_mask) == -1)
+    {
+        perror("sigprocmask (blocking)");
+        return 1;
+    }
+
     // OBSŁUGA SYGNAŁU DO ZWOLNIENIA DO DOMU
     struct sigaction sa;
     sa.sa_handler = handle_sigusr1;
@@ -271,6 +287,29 @@ int main(void)
         liczba_prob_sprawdzenia_poczekalni++;
 
         // usleep(10); // częstotliwość sprawdzania poczekalni
+
+        // ODBIERAJ SYGNAŁY TYLKO TUTAJ, NA KOŃCU PĘTLI
+
+        // Odblokuj sygnały SIGUSR1 i SIGUSR2, używając starej maski
+        if (sigprocmask(SIG_SETMASK, &old_mask, NULL) == -1)
+        {
+            perror("sigprocmask (unblocking)");
+            return 1;
+        }
+
+        // PONOWNIE ZABLOKUJ SYGNAŁY
+
+        // Utwórz maskę i dodaj SIGUSR1 i SIGUSR2
+        sigemptyset(&block_mask);
+        sigaddset(&block_mask, SIGUSR1);
+        sigaddset(&block_mask, SIGUSR2);
+
+        // Zablokuj sygnały od samego początku, zachowując poprzednią maskę
+        if (sigprocmask(SIG_BLOCK, &block_mask, &old_mask) == -1)
+        {
+            perror("sigprocmask (blocking)");
+            return 1;
+        }
     }
 
     shmdt(shm); // Odłączamy pamięć współdzieloną

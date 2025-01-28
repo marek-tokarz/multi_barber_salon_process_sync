@@ -160,6 +160,15 @@ int main(int argc, char *argv[])
     printf("[KASJER] PID zwalnianego fryzjera: %d\n", zwalniany_fryzjer);
     kill(zwalniany_fryzjer, SIGUSR1);
 
+    // TESTOWO ZWOLNIJ WSZYSTKICH FRYZJERÓW:
+    /*
+    for (int i = 0; i < LICZBA_FRYZJEROW; i++)
+    {
+        kill(fryzjerzy_pid[i], SIGUSR1);
+        printf("[KASJER] PID zwalnianego fryzjera: %d\n", fryzjerzy_pid[i]);
+    }
+    */
+
     // PĘTLA WYZNACZAJĄCA CZAS DZIAŁANIA SALONU
     // czas w sekundach 'n' jako argument: ./KASJER n
 

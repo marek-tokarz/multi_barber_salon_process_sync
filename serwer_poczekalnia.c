@@ -46,6 +46,22 @@ int main()
 {
     int OBIEGI_PĘTLI_SPRAWDZANIA = 1000000;
 
+     // blokowanie sygnałów, by odebrać je w pożądanym momencie:
+
+    sigset_t block_mask, old_mask;
+
+    // Utwórz maskę i dodaj SIGUSR1 i SIGUSR2
+    sigemptyset(&block_mask);
+    sigaddset(&block_mask, SIGUSR1);
+    sigaddset(&block_mask, SIGUSR2);
+
+    // Zablokuj sygnały od samego początku, zachowując poprzednią maskę
+    if (sigprocmask(SIG_BLOCK, &block_mask, &old_mask) == -1)
+    {
+        perror("sigprocmask (blocking)");
+        return 1;
+    }
+
     // ODBIÓR SIGUSR1 i/lub SIGUSR2
 
     // Rejestracja handlera dla sygnału SIGUSR1
@@ -225,6 +241,28 @@ int main()
 
        liczba_prob_odbioru++;
        // printf(liczba_prob_odbioru)
+
+
+        // Odblokuj sygnały SIGUSR1 i SIGUSR2, używając starej maski
+        if (sigprocmask(SIG_SETMASK, &old_mask, NULL) == -1)
+        {
+            perror("sigprocmask (unblocking)");
+            return 1;
+        }
+
+        // PONOWNIE ZABLOKUJ SYGNAŁY
+
+        // Utwórz maskę i dodaj SIGUSR1 i SIGUSR2
+        sigemptyset(&block_mask);
+        sigaddset(&block_mask, SIGUSR1);
+        sigaddset(&block_mask, SIGUSR2);
+
+        // Zablokuj sygnały od samego początku, zachowując poprzednią maskę
+        if (sigprocmask(SIG_BLOCK, &block_mask, &old_mask) == -1)
+        {
+            perror("sigprocmask (blocking)");
+            return 1;
+        }
     }
 
     printf("\n[ poczekalnia ] liczba przyjętych : %d\n", liczba_przyjętych_do_poczekalni);
