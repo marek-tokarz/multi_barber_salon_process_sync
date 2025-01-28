@@ -13,8 +13,39 @@ void handle_sigusr1(int signum)
     }
 }
 
+/*
+
+// DO EWAKUACJI KLIENTÓW
+
+int semID_shm; // numer semafora pamięci współdzielonej
+
+SharedMemory *shm;
+
+void handle_sigusr2(int signum)
+{
+    if (signum == SIGUSR2)
+    {
+        printf("[ poczekalnia ] sygnał SIGUSR2, ewakuacja klientów!.\n");
+
+        waitSemafor(semID_shm, 0, SEM_UNDO);
+
+        for (int i = 0; i < shm->counter; i++)
+        {
+            // printf("Poczekalnia: Wysyłam SIGKILL do procesu PID %d\n", shm->pids[i]);
+            kill(shm->pids[i], SIGKILL);
+        }
+
+        shm->counter = 0;
+        signalSemafor(semID_shm, 0);
+    }
+}
+
+*/
+
 int main()
 {
+    int OBIEGI_PĘTLI_SPRAWDZANIA = 1000000;
+
     // ODBIÓR SIGUSR1 i/lub SIGUSR2
 
     // Rejestracja handlera dla sygnału SIGUSR1
@@ -24,20 +55,10 @@ int main()
     sa_sigusr1.sa_flags = SA_RESTART;
     sigaction(SIGUSR1, &sa_sigusr1, NULL);
 
-    /*
-    // Rejestracja handlera dla sygnału SIGUSR2
-    struct sigaction sa_sigusr2;
-    sa_sigusr2.sa_handler = handle_sigusr2;
-    sigemptyset(&sa_sigusr2.sa_mask);
-    sa_sigusr2.sa_flags = 0;
-    sigaction(SIGUSR2, &sa_sigusr2, NULL);
-    */
-
     // SEMAFOR GLOBALNY
 
     int semID_glob; // numer semafora globalnego
-    int N = 5;      // liczba semaforow (na razie wykorzystywane '0' i '1')
-
+   
     semID_glob = alokujSemafor(KEY_GLOB_SEM, N, IPC_CREAT | 0666); // dostęp do semafora globalnego
 
     int semID_shm; // numer semafora pamięci współdzielonej
@@ -67,18 +88,18 @@ int main()
     }
 
     // POCZEKALNIA PRZED PRZYBYCIEM KLIENTÓW
-    /*
+    
     waitSemafor(semID_shm, 0, SEM_UNDO);
     shm->counter = 0;
-    printf("Liczba zapisanych PID-ów: %d\n", shm->counter);
-    printf("Zapisane PID-y:");
+    printf("[ poczekalnia ] przed obsługą: Liczba zapisanych PID-ów: %d\n", shm->counter);
+    printf("[ poczekalnia ] Zapisane PID-y:");
     for (int i = 0; i < MAX_PIDS; i++)
     {
         printf(" %d", (int)shm->pids[i]);
     }
     printf("\n");
     signalSemafor(semID_shm, 0);
-    */
+    
 
     // UZYSKIWANIE DOSTĘPU DO KOLEJKI KOMUNIKATÓW 
     // KOLEJKA KOMUNIKATÓW: klient <-> poczekalnia
@@ -117,7 +138,7 @@ int main()
         }
     }
 
-    while (liczba_prob_odbioru < 1000000) // pętla odbioru komunikatów
+    while (liczba_prob_odbioru < OBIEGI_PĘTLI_SPRAWDZANIA) // pętla odbioru komunikatów
     {
 
         // flaga IPC_NOWAIT, aby msgrcv nie zatrzymało pętli serwera
@@ -206,11 +227,11 @@ int main()
        // printf(liczba_prob_odbioru)
     }
 
-    printf("\nLICZBA PRZYJĘTYCH DO POCZEKALNI: %d\n", liczba_przyjętych_do_poczekalni);
+    printf("\n[ poczekalnia ] liczba przyjętych : %d\n", liczba_przyjętych_do_poczekalni);
 
     waitSemafor(semID_shm, 0, SEM_UNDO);
-    printf("Liczba klientów w poczekalni po zakończeniu obsługi: %d\n", shm->counter);
-    printf("PID-y klientów:");
+    printf("[ poczekalnia ] liczba klientów w poczekalni po zakończeniu obsługi: %d\n", shm->counter);
+    printf("[ poczekalnia ] PID-y klientów w poczekalni po zakończeniu obsługi");
     for (int i = 0; i < shm->counter; i++)
     {
         printf(" %d", (int)shm->pids[i]);
@@ -222,5 +243,5 @@ int main()
     shmctl(shmid, IPC_RMID, NULL); // usunięcie pamięci współdzielonej
     // zwolnijSemafor(semID_shm, 1); // USUWANIE SEMAFOR pamieci wspóldzielonej
 
-    printf("Odebrane komunikaty łącznie: %d\n", odebrane_komunikaty);
+    printf("[ poczekalnia ] Odebrane komunikaty łącznie: %d\n", odebrane_komunikaty);
 }

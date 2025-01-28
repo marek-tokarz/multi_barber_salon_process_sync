@@ -4,6 +4,8 @@ int main(void)
 {
      // printf("[ klient %d] proces uruchomiony \n", getpid());
 
+     int LICZBA_ZAPYTAN_KLIENTA = 1; // + jedno zapytanie do uwolnienia semafora
+
      // Pobierz ID procesu
      pid_t my_pid = getpid(); // do srand() i do buf.pid
 
@@ -14,12 +16,10 @@ int main(void)
      int ZAPLATA_Z_GORY_20_ZL = 1 + (rand() % 2);
      int ZAPLATA_Z_GORY_10_ZL = 1 + (rand() % 2);
 
-     int LICZBA_ZAPYTAN_KLIENTA = 1; // + jedno zapytanie do uwolnienia semafora
-
      // SEMAFOR GLOBALNY DO CHRONOLOGII
 
      int semID; // numer semafora globalnego
-     int N = 5; // liczba semaforow (na razie wykoryzstywane '0' i '1')
+
      semID = alokujSemafor(KEY_GLOB_SEM, N, IPC_CREAT | 0666);
 
      // Inicjalizacja portfela
@@ -86,7 +86,7 @@ int main(void)
      {
           srand((my_pid + a));
 
-          // należy zasymulować losowy czas między zapytniami od poczekalnię
+          // należy zasymulować losowy czas między zapytniami od poczekalni
 
           czas_miedzy_zapytaniami = (rand() % 10);
 

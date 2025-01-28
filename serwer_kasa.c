@@ -58,7 +58,6 @@ int main(void)
   // SEMAFOR GLOBALNY do chronologii wstępnej
 
   int semID;
-  int N = 5;
 
   semID = alokujSemafor(KEY_GLOB_SEM, N, IPC_CREAT | 0666);
 

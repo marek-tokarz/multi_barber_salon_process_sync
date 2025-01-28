@@ -4,13 +4,8 @@ int main(void)
 {
     printf("[PROCEDURA KLIENT]\n");
 
-    // int LICZBA_KLIENTOW = 10000;
-    // int LICZBA_KLIENTOW = 1000;
-    int LICZBA_KLIENTOW = 100;
-
     int semID; // numer semafora globalnego
-    int N = 5; // liczba semaforow (na razie wykoryzstywane '0' i '1') // dostęp do smeafora
-
+    
     semID = alokujSemafor(KEY_GLOB_SEM, N, IPC_CREAT | 0666);
 
     // TWORZENIE kolejki komunikatów do zapytań i 

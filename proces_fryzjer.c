@@ -1,8 +1,39 @@
 #include "header_file.h"
 
+int pid_klienta = 0;
+
+volatile sig_atomic_t keep_running = 1;
+
+void handle_sigusr1(int sig)
+{
+    if (sig == SIGUSR1)
+    {
+        printf("[fryzjer] Otrzymano sygnał SIGUSR1. Zwalniam się do domu!\n");
+        if (pid_klienta > 0)
+        {
+            if (kill(pid_klienta, SIGTERM) == -1)
+            {
+                perror("fryzjer: kill(SIGTERM)");
+            }
+        }
+        keep_running = 0;
+    }
+}
+
 int main(void)
 {
     // printf("[ fryzjer %d] proces uruchomiony\n", getpid());
+
+    // OBSŁUGA SYGNAŁU DO ZWOLNIENIA DO DOMU
+    struct sigaction sa;
+    sa.sa_handler = handle_sigusr1;
+    sigemptyset(&sa.sa_mask);
+    sa.sa_flags = SA_RESTART;
+    if (sigaction(SIGUSR1, &sa, NULL) == -1)
+    {
+        perror("sigaction");
+        exit(1);
+    }
 
     int pid_fryzjera = getpid();
 
@@ -51,10 +82,14 @@ int main(void)
     int shmid;         // nr pamięci współdzielonej - poczekalnia
     SharedMemory *shm; // wskaźnik na pamięć współdzieloną
 
+    // printf("SHM_KEY %d\n",SHM_KEY);
+    // printf("sizeof(SharedMemory) %lu \n",sizeof(SharedMemory));
+
     // Tworzenie segmentu pamięci współdzielonej
     shmid = shmget(SHM_KEY, sizeof(SharedMemory), IPC_CREAT | 0666);
     if (shmid == -1)
     {
+        fprintf(stderr, "fryzjer shmget failed: %s (%d)\n", strerror(errno), errno);
         perror("fryzjer shmget");
         exit(1);
     }
@@ -64,11 +99,9 @@ int main(void)
 
     int liczba_prob_sprawdzenia_poczekalni = 0;
 
-    int pid_klienta = 0;
-
     int liczba_zabranych_z_poczekalni = 0;
 
-    while (liczba_prob_sprawdzenia_poczekalni < 100000) // pętla odbioru komunikatów
+    while (liczba_prob_sprawdzenia_poczekalni < 1000000 && keep_running == 1) // pętla odbioru komunikatów
     {
         waitSemafor(semID_shm, 0, SEM_UNDO); // CZEKAJ NA SEMAFORZE 0
 
@@ -79,15 +112,19 @@ int main(void)
             // Zabierz pierwszego klienta z poczekalni i przesuń pozostałych
             pid_klienta = shm->pids[0];
 
-            // Przesuń pozostałe PID-y o jedno miejsce do przodu
-            for (int i = 0; i < shm->counter - 1; i++)
+            if (pid_klienta > 0)
             {
-                shm->pids[i] = shm->pids[i + 1];
+
+                // Przesuń pozostałe PID-y o jedno miejsce do przodu
+                for (int i = 0; i < shm->counter - 1; i++)
+                {
+                    shm->pids[i] = shm->pids[i + 1];
+                }
+
+                shm->counter--; // dekrementacja - zabrano pierwszego klienta
+
+                liczba_zabranych_z_poczekalni++;
             }
-
-            shm->counter--; // dekrementacja - zabrano pierwszego klienta
-
-            liczba_zabranych_z_poczekalni++;
 
             // printf("Klient o PID %d zabrany z poczekalnia.\n", pid_klienta);
         }
@@ -156,7 +193,7 @@ int main(void)
             if (msgrcv(msqid_pay, &platnosc, 7 * sizeof(int), pid_fryzjera, 0) == -1)
             {
                 // perror("msgrcv - fryzjer");
-                //prosby_o_platnosc_z_gory++;
+                // prosby_o_platnosc_z_gory++;
                 // usleep(10);
                 perror("msgrcv - fryzjer - płatność z góry od klienta");
             }

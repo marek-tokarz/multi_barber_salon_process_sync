@@ -4,27 +4,20 @@ int main(void)
 {
     printf("[PROCEDURA FRYZJER]\n");
 
-    int LICZBA_FOTELI = 10;
+    // KOLEJKA KOMUNIKATÓW DO OBSŁUGI SYGNAŁÓW
 
-    //int LICZBA_FRYZJEROW = 1000;
-    int LICZBA_FRYZJEROW = 20;
-  
-    /*
-    // UZYSKIWANIE DOSTĘPU DO KOLEJKI KOMUNIKATÓW płatność z góry
-    // TYLKO DO CELU JEJ USUNIĘCIA, GDY ZNIKNĄ fryzjerzy
-    int msqid_pay;
+    int msgqid_barber;
 
-    if ((msqid_pay = msgget(MSG_KEY_PAY, 0666 | IPC_CREAT)) == -1)
+    msgqid_barber = msgget(KEY_SIG1_BARBER, IPC_CREAT | 0666);
+    if (msgqid_barber == -1)
     {
-        perror("msgget");
+        perror("msgget msgqid_barber failed");
         exit(1);
     }
-    */
 
     // SEMAFOR GLOBALNY do chronologii wstępnej
 
     int semID;
-    int N = 5;
 
     semID = alokujSemafor(KEY_GLOB_SEM, N, IPC_CREAT | 0666);
 
@@ -57,12 +50,26 @@ int main(void)
             perror("exec: proces_klient failed"); // Jeśli execlp nie zadziałało
             exit(1);
         default: // Proces macierzysty
+
+            MessageBarber msg;
+            msg.mtype = 1;
+            msg.pid = fryzjer_pid;
+            if (msgsnd(msgqid_barber, &msg, sizeof(msg.pid), 0) == -1)
+            {
+                perror("msgsnd FRYZJER failed");
+                // exit(1);
+            }
+            // printf("[FRYZJER] wysłał PID fryzjera %d kol. kom.\n", fryzjer_pid);
+
             break;
         }
     }
 
     // SEMAFOR DLA URUCHOMIENIA KASY
     signalSemafor(semID, 2); // PODNIEŚ SEMAFOR 2 - dla kasy
+
+    // SEMAFOR DLA KASJERA - wysłałem PIDy fryzjerów
+    signalSemafor(semID, 5); // PODNIEŚ SEMAFOR 5 - dla KASJERA
 
     // czekanie na wszystkie procesy potomne
     for (i = 0; i < LICZBA_FRYZJEROW; i++)

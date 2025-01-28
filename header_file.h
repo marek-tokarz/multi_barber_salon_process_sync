@@ -19,7 +19,19 @@
 #include <pthread.h>
 #include <signal.h>
 
+// ZMIENNE DLA PROCESÓW
+
+int LICZBA_FOTELI = 6;
+
+int LICZBA_FRYZJEROW = 8;
+
+#define MAX_PIDS 10    // Maksymalna liczba PID-ów - pojemność poczekalni
+  
+int LICZBA_KLIENTOW = 30;
+
 // # # # SEMAFORY
+
+int N = 6; // LICZBA SEMAFORÓW GLOBALNYCH do wstępnej chronologii uruchomienia
 
 #define KEY_SEM_KASA 82641 // klucz do semafora kasy - wpłaty z góry i wypłaty reszty
 
@@ -29,7 +41,16 @@
 
 #define KEY_FOTEL_SEM 3456 // klucz do semafora fotel
 
-// # # # KOLEJKI KOMUNIKATÓW
+// # # # KOLEJKI KOMUNIKATÓW DO WYSYŁANIA SYGNAŁÓW
+
+#define KEY_SIG1_BARBER 9283 // klucz do globalnego semafora chronologii
+
+typedef struct {
+    long mtype;
+    pid_t pid;
+} MessageBarber;
+
+// # # # KOLEJKI KOMUNIKATÓW DO OBSŁUGI SALONU
 
 // KOLEJKA DWUSTRONNA
 #define MSG_KEY_WAIT_ROOM 67890  // Klucz do kolejki komunikatów - wysyłanie 
@@ -96,8 +117,6 @@ struct change {
                        // miejsce na zapisywanie PIDów klientów, 
                        // ktorzy weszli do poczekalni
 // SCHEMAT DZIAŁANIA PAMIĘCI NA SAMYM DOLE, POD '#endif // HEADER_FILE'
-
-#define MAX_PIDS 30    // Maksymalna liczba PID-ów - pojemność poczekalni
 
 // Struktura danych do przechowywania PID-ów
 typedef struct {

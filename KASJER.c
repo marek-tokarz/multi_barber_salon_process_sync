@@ -11,14 +11,31 @@ int main(int argc, char *argv[])
         exit(1);
     }
 
-     int seconds = atoi(argv[1]);
+    int seconds = atoi(argv[1]);
+
+    // KOLEJKA KOMUNIKATÓW DO OBSŁUGI SYGNAŁÓW
+
+    int msgqid_barber;
+
+    msgqid_barber = msgget(KEY_SIG1_BARBER, IPC_CREAT | 0666);
+    if (msgqid_barber == -1)
+    {
+        perror("msgget msgqid_barber failed");
+        exit(1);
+    }
+
+    // SEMAFOR kasy
+
+    int semID_kasa;
+
+    semID_kasa = alokujSemafor(KEY_SEM_KASA, 1, IPC_CREAT | 0666);
 
     // SEMAFOR GLOBALNY DO CHRONOLOGII URUCHOMIENIA
 
     // KLIENT -> klient -> poczekalnia -> FRYZJER -> fryzjer
 
     int semID; // numer semafora globalnego
-    int N = 5; // liczba semaforow
+
     // 3 - OD PROCEDURA FRYZJER (fryzjerzy zniknęli)
     // 4 - OD PROCEDURA KLIENT (klienci zniknęli)
 
@@ -37,8 +54,8 @@ int main(int argc, char *argv[])
 
     // TWORZENIE PAMIĘCI WSPÓŁDZIELONEJ
 
-    int shmid;         // nr pamięci współdzielonej - poczekalnia
-    
+    int shmid; // nr pamięci współdzielonej - poczekalnia
+
     // Tworzenie segmentu pamięci współdzielonej
     shmid = shmget(SHM_KEY, sizeof(SharedMemory), IPC_CREAT | IPC_EXCL | 0666);
 
@@ -114,6 +131,35 @@ int main(int argc, char *argv[])
         break;
     }
 
+    // printf("[KASJER] czekam na semaforze 5\n");
+
+    waitSemafor(semID, 5, SEM_UNDO); // CZEKAJ NA SEMAFORZE 5
+
+    int fryzjerzy_pid[LICZBA_FRYZJEROW];
+
+    // Odbieranie komunikatów z kolejki (PID fryzjerów)
+    // printf("[KASJER] czekam na PIDy fryzjerów\n");
+    for (int i = 0; i < LICZBA_FRYZJEROW; i++)
+    {
+        MessageBarber msg;
+        if (msgrcv(msgqid_barber, &msg, sizeof(msg.pid), 1, 0) == -1)
+        {
+            perror("msgrcv KASJER failed");
+            // exit(1);
+        }
+        fryzjerzy_pid[i] = msg.pid;
+        // printf("[KASJER] odebrał PID fryzjera %d\n", msg.pid);
+    }
+
+    srand(getpid());
+
+    printf("[KASJER] zwalniam do domu losowego fryzjera\n");
+    int nr_fryzjera = rand() % LICZBA_FRYZJEROW;
+    int zwalniany_fryzjer = fryzjerzy_pid[nr_fryzjera];
+    // printf("Nr kolejny zwalnianego fryzjera: %d\n",nr_fryzjera);
+    printf("[KASJER] PID zwalnianego fryzjera: %d\n", zwalniany_fryzjer);
+    kill(zwalniany_fryzjer, SIGUSR1);
+
     // PĘTLA WYZNACZAJĄCA CZAS DZIAŁANIA SALONU
     // czas w sekundach 'n' jako argument: ./KASJER n
 
@@ -121,12 +167,11 @@ int main(int argc, char *argv[])
 
     time(&start_time);
 
-    do 
+    do
     {
         time(&current_time);
         usleep(1000000);
     } while (difftime(current_time, start_time) < seconds);
-   
 
     printf("[KASJER] zamykam kasę\n");
     kill(serwer_kasa_pid, SIGUSR1);
@@ -173,7 +218,7 @@ int main(int argc, char *argv[])
 
     msgctl(msqid_pay, IPC_RMID, NULL);
 
-     // KOLEJKA KOM. od kasy do klienta
+    // KOLEJKA KOM. od kasy do klienta
 
     int msqid_change;
 
@@ -235,6 +280,8 @@ int main(int argc, char *argv[])
 
     // DO USUNIĘCIA ZASOBÓW JAKIE POZOSTAŁY - jeśli inne programy ich nie zamkneły poprawnie
 
+    msgctl(msgqid_barber, IPC_RMID, NULL);
+
     shmid = shmget(SHM_KEY, sizeof(SharedMemory), IPC_CREAT | 0666);
     if (shmid == -1)
     {
@@ -251,6 +298,7 @@ int main(int argc, char *argv[])
     shmctl(shmid, IPC_RMID, NULL);  // usunięcie pamięci współdzielonej
     zwolnijSemafor(semID_shm, 1);   // USUWANIE SEMAFOR pamieci wspóldzielonej
     zwolnijSemafor(semID_fotel, 0); // USUWANIE SEMAFORA foteli
+    zwolnijSemafor(semID_kasa, 0);  // USUWANIE SEMAFORA KASY
 
     printf("[PROCEDURA KASJER] zakończona\n");
 
