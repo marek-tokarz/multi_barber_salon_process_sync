@@ -4,8 +4,6 @@
 
 volatile sig_atomic_t keep_running = 1;
 
-volatile sig_atomic_t sigusr2_received = 0;
-
 void handle_sigusr1(int signum)
 {
     if (signum == SIGUSR1)
@@ -16,6 +14,8 @@ void handle_sigusr1(int signum)
 }
 
 // DO EWAKUACJI KLIENTÓW
+
+volatile sig_atomic_t sigusr2_received = 0;
 
 int semID_shm; // numer semafora pamięci współdzielonej
 
@@ -60,7 +60,6 @@ int main()
     sigaction(SIGUSR1, &sa_sigusr1, NULL);
 
     // SIGUSR2
-
     struct sigaction sa_sigusr2;
     sa_sigusr2.sa_handler = handle_sigusr2;
     sigemptyset(&sa_sigusr2.sa_mask);
@@ -95,7 +94,7 @@ int main()
     shm = (SharedMemory *)shmat(shmid, NULL, 0);
     if (shm == (SharedMemory *)-1)
     {
-        perror("shmat");
+        perror("poczekalnia - shmat");
         exit(1);
     }
 
@@ -127,10 +126,9 @@ int main()
         exit(1);
     }
 
-    int odebrane_komunikaty = 0; // DO PRZERWANIA PĘTLI SERWERA
-    int liczba_prob_odbioru = 0; // DO PRZERWANIA PĘTLI SERWERA
-    // liczba prób odbioru ma zapobiec zamknięci pętli gdy akurat kolejka
-    // przypadkowo była pusta, bo klienci nic nie wysłali
+    int odebrane_komunikaty = 0; // DO PODLICZENIA ODEBRANYCH KOMUNIKATÓW
+    int liczba_prob_odbioru = 0; // DO PRZERWANIA PĘTLI SERWERA - OPCJONALNIE z SIGUSR1
+
     int liczba_przyjętych_do_poczekalni = 0;
 
     int podniesiono_semafor_globalny_nr_1 = 0;
@@ -149,11 +147,11 @@ int main()
         }
     }
 
-    while (liczba_prob_odbioru < OBIEGI_PĘTLI_SPRAWDZANIA && keep_running == 1) // pętla odbioru komunikatów
+    while (/*liczba_prob_odbioru < OBIEGI_PĘTLI_SPRAWDZANIA &&*/ keep_running == 1) // pętla odbioru komunikatów
     {
 
         // flaga IPC_NOWAIT, aby msgrcv nie zatrzymało pętli serwera
-        // odbiór kom.: mtype <= -1
+        
         if ((msgrcv(msqid, &buf, sizeof(buf), 1, IPC_NOWAIT)) == -1)
         {
             // perror("msgrcv - server");
@@ -219,6 +217,8 @@ int main()
             return 1;
         }
 
+        // MOMENT NA ODEBRANIE SYGNAŁÓW
+
         // PONOWNIE ZABLOKUJ SYGNAŁY
 
         // Utwórz maskę i dodaj SIGUSR1 i SIGUSR2
@@ -246,7 +246,7 @@ int main()
             for (int i = 0; i < licznik; i++)
             {
                 PID = shm->pids[i];
-                printf("%d Poczekalnia: usuwam PID %d\n", i ,PID);
+                printf("%d [ poczekalnia ]: usuwam PID %d\n", i ,PID);
                 shm->pids[i] = 0;
             }
 
@@ -286,7 +286,6 @@ int main()
 
     msgctl(msqid, IPC_RMID, NULL); // usunięcie kolejki komunikatów
     shmctl(shmid, IPC_RMID, NULL); // usunięcie pamięci współdzielonej
-    // zwolnijSemafor(semID_shm, 1); // USUWANIE SEMAFOR pamieci wspóldzielonej
-
+  
     printf("[ poczekalnia ] Odebrane komunikaty łącznie: %d\n", odebrane_komunikaty);
 }

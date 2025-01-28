@@ -9,11 +9,13 @@
 
 volatile sig_atomic_t keep_running = 1;
 
-void signal_handler(int signum) {
-    if (signum == SIGUSR1) {
-        keep_running = 0;
-        printf("[ kasa ]: Otrzymano sygnał SIGUSR1 - KONIEC PĘTLI\n");
-    }
+void signal_handler(int signum)
+{
+  if (signum == SIGUSR1)
+  {
+    keep_running = 0;
+    printf("[ kasa ]: Otrzymano sygnał SIGUSR1 - KONIEC PĘTLI\n");
+  }
 }
 
 int sprawdz_czy_jest_reszta(int reszta_dla_klienta, Banknoty *Kasa);
@@ -22,7 +24,6 @@ int *wydaj_reszte(int kwota_reszty, Banknoty *Kasa);
 
 Banknoty KASA = {0, 0, 0}; // inicjalizacja kasy
 
-// const int LICZBA_WATKOW = 100;    // zakładam, że wystarczy 100 watków
 int FAKTYCZNA_LICZBA_WATKOW = 0; // do thread_join()
 
 pthread_t watki[100]; // zakładam, że wystarczy 100 watków
@@ -36,21 +37,36 @@ int semID_kasa;
 
 int main(void)
 {
+  // blokowanie sygnałów, by odebrać je w pożądanym momencie:
+
+  sigset_t block_mask, old_mask;
+
+  // Utwórz maskę i dodaj SIGUSR1 i SIGUSR2
+  sigemptyset(&block_mask);
+  sigaddset(&block_mask, SIGUSR1);
+  sigaddset(&block_mask, SIGUSR2);
+
+  // Zablokuj sygnały od samego początku, zachowując poprzednią maskę
+  if (sigprocmask(SIG_BLOCK, &block_mask, &old_mask) == -1)
+  {
+    perror("sigprocmask (blocking)");
+    return 1;
+  }
+
   // ODBIÓR SIGUSR1
 
-    struct sigaction sa;
-    sa.sa_handler = signal_handler;
-    sigemptyset(&sa.sa_mask);
-    sa.sa_flags = SA_RESTART;
-    sigaction(SIGUSR1, &sa, NULL);
+  struct sigaction sa;
+  sa.sa_handler = signal_handler;
+  sigemptyset(&sa.sa_mask);
+  sa.sa_flags = SA_RESTART;
+  sigaction(SIGUSR1, &sa, NULL);
 
-
-  int LICZBA_TRANSAKCJI = 10000000;
+  int LICZBA_TRANSAKCJI = 100000000;
 
   // SEMAFOR kasy - wpłaty i wydawanie reszty
 
   int semID_kasa;
- 
+
   semID_kasa = alokujSemafor(KEY_SEM_KASA, 1, IPC_CREAT | 0666);
 
   inicjalizujSemafor(semID_kasa, 0, 0);
@@ -65,13 +81,13 @@ int main(void)
   // TYLKO DO CELU JEJ USUNIĘCIA, GDY zniknie kasa - wtedy płatności klient -> fryzjer
   // niemożlwe
 
-    int msqid_pay;
+  int msqid_pay;
 
-    if ((msqid_pay = msgget(MSG_KEY_PAY, 0666 | IPC_CREAT)) == -1)
-    {
-        perror("msgget");
-        exit(1);
-    }
+  if ((msqid_pay = msgget(MSG_KEY_PAY, 0666 | IPC_CREAT)) == -1)
+  {
+    perror("msgget");
+    exit(1);
+  }
 
   // UZYSKIWANIE DOSTĘPU DO KOLEJKI KOMUNIKATÓW fryjer -> kasa
   // zapłata za usługę od klienta i reszta do wydania dla klienta przez kasę
@@ -86,8 +102,7 @@ int main(void)
 
   // UZYSKIWANIE DOSTĘPU DO KOLEJKI KOMUNIKATÓW kasa -> klient
   // reszta do wydania dla klienta przez kasę
-  // (lub ewentualnie informacja, że jej nie ma - bo wtedy
-  // proces klient utkwi na msgrcv)
+  // (lub ewentualnie informacja, że jej nie ma - bo wtedy proces klient utkwi na msgrcv)
 
   if ((msqid_change = msgget(MSG_KEY_CHANGE, 0666 | IPC_CREAT)) == -1)
   {
@@ -118,7 +133,7 @@ int main(void)
 
   int reszta_z_watku = 0;
 
-  while (transakcje < LICZBA_TRANSAKCJI && keep_running == 1)
+  while (/*transakcje < LICZBA_TRANSAKCJI &&*/ keep_running == 1)
   {
 
     int sprawdzam_kolejke = 0;
@@ -147,9 +162,6 @@ int main(void)
 
     if (dotarla_gotowka == 1)
     {
-
-      // printf("dotarła wpłata od klienta\n");
-
       // SYGNAŁ (ROZGŁOSZENIE - BROADCAST) DLA WĄTKÓW
 
       // printf("Wpłynęła kolejna wpłata do kasy \n");
@@ -157,12 +169,10 @@ int main(void)
       pthread_cond_broadcast(&cond);
 
       // printf("[ kasa ] Do zwrotu klientowi: %d\n", klient_wplacil.reszta_dla_klienta);
-      // SEMAFOR DOSTĘPU DO KASY
 
       KASA.banknot50 += klient_wplacil.banknoty[0];
       KASA.banknot20 += klient_wplacil.banknoty[1];
       KASA.banknot10 += klient_wplacil.banknoty[2];
-     
 
       struct change wydanie_reszty;
 
@@ -185,15 +195,16 @@ int main(void)
       }
       else // JEŚLI RESZTA JEST ( reszta > 0 ZŁ)
       {
-        // SIĘGANIE DO KASY POWINNO BYĆ ZABEZPIECZONE SEMAFOREM
+        
         int wynik_sprawdzenia = sprawdz_czy_jest_reszta(klient_wplacil.reszta_dla_klienta, &KASA);
-        // PONIEWAŻ WĄTKI TEŻ MOGĄ SIĘGAĆ DO KASY
 
         if (wynik_sprawdzenia == 0) // JEŚLI RESZTĘ MOŻNA OD RAZU WYDAĆ
         {
           wydanie_reszty.reszta = klient_wplacil.reszta_dla_klienta;
           // printf("[ kasa ]  wydać resztę, wydaję kwotę: %d \n", wydanie_reszty.reszta);
+    
           int *do_wydania = wydaj_reszte(wydanie_reszty.reszta, &KASA);
+  
           wydanie_reszty.banknoty[0] = do_wydania[0];
           wydanie_reszty.banknoty[1] = do_wydania[1];
           wydanie_reszty.banknoty[2] = do_wydania[2];
@@ -209,7 +220,6 @@ int main(void)
             // printf("[ kasa ] wysłała resztę dla klienta.\n");
             reszta_faktyczna++;
           }
-
         }
         else // JEŚLI RESZTY NIE MOŻNA WYDAĆ, UTWÓRZ WĄTEK WYDAWANIA
         {
@@ -222,7 +232,6 @@ int main(void)
           // printf("Do watku wysyłam dane:\n");
           // printf("Reszta do wypłacenia %d:\n", wydaje_watek.reszta);
           // printf("Adresat wypłaty %lu:\n",wydaje_watek.mtype );
-          // zakładam, że wystarczy 10 watków
           int tworzenie_watku = pthread_create(&watki[FAKTYCZNA_LICZBA_WATKOW], NULL, watek_wydaje_reszte, &wydaje_watek);
           FAKTYCZNA_LICZBA_WATKOW++;
           if (tworzenie_watku == -1)
@@ -237,15 +246,37 @@ int main(void)
     dotarla_gotowka = 0; // zerowanie przed odbiorem kolejnej wiadomości od fryzjera
 
     // CZYSTO TESTOWE 'WZBOGACENIE KASY' BY SPRÓBOWAĆ ZAMKNĄĆ WĄTKI
-    
+
     // KASA.banknot50 += 0;
     // KASA.banknot20 += 1;
     // KASA.banknot10 += 1;
 
     pthread_cond_broadcast(&cond);
-    
 
     transakcje++;
+
+    // Odblokuj sygnały SIGUSR1 i SIGUSR2, używając starej maski
+    if (sigprocmask(SIG_SETMASK, &old_mask, NULL) == -1)
+    {
+      perror("sigprocmask (unblocking)");
+      return 1;
+    }
+
+    // MOMENT NA ODEBRANIE SYGNAŁÓW
+
+    // PONOWNIE ZABLOKUJ SYGNAŁY
+
+    // Utwórz maskę i dodaj SIGUSR1 i SIGUSR2
+    sigemptyset(&block_mask);
+    sigaddset(&block_mask, SIGUSR1);
+    sigaddset(&block_mask, SIGUSR2);
+
+    // Zablokuj sygnały
+    if (sigprocmask(SIG_BLOCK, &block_mask, &old_mask) == -1)
+    {
+      perror("sigprocmask (blocking)");
+      return 1;
+    }
   }
 
   for (int i = 0; i < FAKTYCZNA_LICZBA_WATKOW; i++)
@@ -260,18 +291,18 @@ int main(void)
   printf("[ kasa ] RESZTY:\n");
   printf("[ kasa ] reszta 0 zl: %d\n", reszta_0_zl);
   printf("[ kasa ] reszta z kasy (bez wątku): %d\n", reszta_faktyczna);
-  printf("[ kasa: wątki] wypłaty reszty przez wątek: %d\n",reszta_z_watku);
+  printf("[ kasa: wątki] wypłaty reszty przez wątek: %d\n", reszta_z_watku);
 
   msgctl(msqid_pay, IPC_RMID, NULL);
   msgctl(msqid_change, IPC_RMID, NULL);
-  
+
   return 0;
 }
 
 void *watek_wydaje_reszte(void *arg) // FUNKCJA DLA WĄTKÓW
 {
   struct change *reszta_watek = (struct change *)arg;
-  printf("[watek] otrzymał: PID %ld, reszta %d\n", reszta_watek ->mtype, reszta_watek ->reszta);
+  printf("[watek] otrzymał: PID %ld, reszta %d\n", reszta_watek->mtype, reszta_watek->reszta);
   // semafor dostępu do KASY
 
   // printf("Do watku dotarły dane:\n");
@@ -280,17 +311,21 @@ void *watek_wydaje_reszte(void *arg) // FUNKCJA DLA WĄTKÓW
 
   pthread_mutex_lock(&mutex);
   int reszta_w_watku = reszta_watek->reszta;
+ 
   int czy_mozna_wydac = sprawdz_czy_jest_reszta(reszta_w_watku, &KASA);
+
   while (czy_mozna_wydac == 1)
   {
+    
     czy_mozna_wydac = sprawdz_czy_jest_reszta(reszta_w_watku, &KASA);
     //  printf("\t[watek ] czekam na odpowiednie nominały\n");
+    
     pthread_cond_wait(&cond, &mutex);
   }
   // MOŻNA WYDAĆ RESZTĘ PRZEZ WĄTEK:
-
+  
   int *do_wydania = wydaj_reszte(reszta_w_watku, &KASA);
-
+  
   struct change wydanie_reszty_watkiem;
 
   wydanie_reszty_watkiem.mtype = reszta_watek->mtype;

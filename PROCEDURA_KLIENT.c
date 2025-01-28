@@ -8,11 +8,9 @@ int main(void)
     
     semID = alokujSemafor(KEY_GLOB_SEM, N, IPC_CREAT | 0666);
 
-    // TWORZENIE kolejki komunikatów do zapytań i 
-    // odpowiedzi z poczekalni
-    int msqid; // nr kolejki komunikatów do zapytań do poczekalnia
+    // TWORZENIE kolejki komunikatów do zapytań i odpowiedzi z poczekalni
+    int msqid; // nr kolejki komunikatów do zapytań do poczekalni
  
-
     // Tworzenie kolejki komunikatów
     msqid = msgget(MSG_KEY_WAIT_ROOM, IPC_CREAT | 0666);
     if (msqid == -1)

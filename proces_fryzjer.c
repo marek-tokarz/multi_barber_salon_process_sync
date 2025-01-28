@@ -8,8 +8,8 @@ void handle_sigusr1(int sig)
 {
     if (sig == SIGUSR1)
     {
-        printf("[fryzjer] Otrzymano sygnał SIGUSR1. Zwalniam się do domu!\n");
-        if (pid_klienta > 0)
+        printf("[fryzjer %d] Sygnał SIGUSR1. Zwalniam się do domu!\n", getpid());
+        if (pid_klienta > 0) // tylko jeśli ma klienta
         {
             if (kill(pid_klienta, SIGTERM) == -1)
             {
@@ -19,6 +19,23 @@ void handle_sigusr1(int sig)
         keep_running = 0;
     }
 }
+
+void handle_sigusr2(int sig)
+{
+    if (sig == SIGUSR2)
+    {
+        
+        if (pid_klienta > 0) // tylko jeśli ma klienta
+        {
+            printf("[fryzjer %d] Sygnał SIGUSR2. Ewakuacja klienta: %d !\n",getpid(), pid_klienta);
+            if (kill(pid_klienta, SIGTERM) == -1)
+            {
+                perror("fryzjer: kill(SIGTERM)");
+            }
+        }
+    }
+}
+
 
 int main(void)
 {
@@ -40,7 +57,7 @@ int main(void)
         return 1;
     }
 
-    // OBSŁUGA SYGNAŁU DO ZWOLNIENIA DO DOMU
+    // SIGUSR1 - OBSŁUGA SYGNAŁU DO ZWOLNIENIA DO DOMU
     struct sigaction sa;
     sa.sa_handler = handle_sigusr1;
     sigemptyset(&sa.sa_mask);
@@ -51,6 +68,13 @@ int main(void)
         exit(1);
     }
 
+    // SIGUSR2 - OBSŁUGA EWAKUACJI KLIENTA
+    struct sigaction sa_sigusr2;
+    sa_sigusr2.sa_handler = handle_sigusr2;
+    sigemptyset(&sa_sigusr2.sa_mask);
+    sa_sigusr2.sa_flags = 0;
+    sigaction(SIGUSR2, &sa_sigusr2, NULL);
+
     int pid_fryzjera = getpid();
 
     srand(pid_fryzjera);
@@ -58,10 +82,7 @@ int main(void)
     // int KOSZT_OBSLUGI = (190 - (20*(rand()%2))  - (10*(rand()%2)));
 
     int KOSZT_OBSLUGI = 80;
-    // przy koszcie 70 zł uruchamiają się wątki do wypłacania
-    // ale problem z wydaniem pieniędzy się pogłębia i program się zatrzymuje
-    // i nie kończy prawidłowo
-
+ 
     // printf("KOSZT_OBSLUGI %d\n",KOSZT_OBSLUGI);
 
     // SEMAFOR FOTELI
@@ -98,7 +119,6 @@ int main(void)
     int shmid;         // nr pamięci współdzielonej - poczekalnia
     SharedMemory *shm; // wskaźnik na pamięć współdzieloną
 
-    // printf("SHM_KEY %d\n",SHM_KEY);
     // printf("sizeof(SharedMemory) %lu \n",sizeof(SharedMemory));
 
     // Tworzenie segmentu pamięci współdzielonej
@@ -112,6 +132,11 @@ int main(void)
 
     // Podpięcie segmentu do przestrzeni adresowej procesu
     shm = (SharedMemory *)shmat(shmid, NULL, 0);
+    if (shm == (SharedMemory *)-1)
+    {
+        perror("fryzjer - shmat");
+        exit(1);
+    }
 
     int liczba_prob_sprawdzenia_poczekalni = 0;
 
@@ -184,29 +209,6 @@ int main(void)
 
             int dokonano_platnosci = 0;
 
-            // PĘTLA ODBIORU PŁATNOŚCI
-            /*
-            while (prosby_o_platnosc_z_gory < 100) // by nie czekać w nieskończoność na płatność
-            {                                    // czyli nie utkwić na msgrcv
-
-                // RACZEJ BEZ IPC_NOWAIT - fryzjer ma czekać na kasę od klienta
-                if (msgrcv(msqid_pay, &platnosc, 7 * sizeof(int), pid_fryzjera, IPC_NOWAIT) == -1)
-                {
-                    // perror("msgrcv - fryzjer");
-                    prosby_o_platnosc_z_gory++;
-                    // usleep(10);
-                }
-                else
-                {
-                    // printf("[ fryzjer %d] otrzymał płatność od: %d\n", getpid(), pid_klienta);
-                    prosby_o_platnosc_z_gory = 11; // ZAKOŃCZ PĘTLĘ czekania na płatność
-                    dokonano_platnosci = 1;
-                }
-
-                // usleep(10);
-            }
-            */
-
             if (msgrcv(msqid_pay, &platnosc, 7 * sizeof(int), pid_fryzjera, 0) == -1)
             {
                 // perror("msgrcv - fryzjer");
@@ -261,15 +263,6 @@ int main(void)
                 zaplata_reszta.banknoty[0] = platnosc.banknoty[0];
                 zaplata_reszta.banknoty[1] = platnosc.banknoty[1];
                 zaplata_reszta.banknoty[2] = platnosc.banknoty[2];
-
-                /*
-                printf("zaplata_reszta.mtype %ld\n",zaplata_reszta.mtype);
-                printf("zaplata_reszta.klient_PID %d\n",zaplata_reszta.klient_PID );
-                printf("zaplata_reszta.reszta_dla_klienta %d\n",zaplata_reszta.reszta_dla_klienta);
-                printf("zaplata_reszta.banknoty[0] %d\n",zaplata_reszta.banknoty[0] );
-                printf("zaplata_reszta.banknoty[1] %d\n",zaplata_reszta.banknoty[1]);
-                printf("zaplata_reszta.banknoty[2] %d\n",zaplata_reszta.banknoty[2]);
-                */
 
                 if (msgsnd(msqid_cash, &zaplata_reszta, 6 * sizeof(int), 0) == -1)
                 {

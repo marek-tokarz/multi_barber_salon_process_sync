@@ -27,7 +27,7 @@ int LICZBA_FRYZJEROW = 8;
 
 #define MAX_PIDS 10    // Maksymalna liczba PID-ów - pojemność poczekalni
   
-int LICZBA_KLIENTOW = 30;
+int LICZBA_KLIENTOW = 20;
 
 // # # # SEMAFORY
 

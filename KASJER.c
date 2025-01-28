@@ -3,14 +3,14 @@
 int main(int argc, char *argv[])
 {
 
-    // CZAS OTWARCIA JAKO ARGUMENT
+    // CZAS OTWARCIA SALONU JAKO ARGUMENT
 
     int seconds = atoi(argv[1]);
 
     if (argc != 2)
     {
         fprintf(stderr, "Użycie: %s <ilość_sekund>\n", argv[0]);
-        
+
         exit(1);
     }
 
@@ -143,7 +143,7 @@ int main(int argc, char *argv[])
     for (int i = 0; i < LICZBA_FRYZJEROW; i++)
     {
         MessageBarber msg;
-        if (msgrcv(msgqid_barber, &msg, sizeof(msg.pid), 1, 0) == -1)
+        if (msgrcv(msgqid_barber, &msg, sizeof(msg.pid), 1, IPC_NOWAIT) == -1)
         {
             perror("msgrcv KASJER failed");
             // exit(1);
@@ -170,17 +170,22 @@ int main(int argc, char *argv[])
     }
     */
 
-    
+    printf("[KASJER] Ewakuuję salon!\n");
 
-    printf("[KASJER] ewakuuję poczekalnię\n");
+    for (int i = 0; i < LICZBA_FRYZJEROW; i++)
+    {
+        kill(fryzjerzy_pid[i], SIGUSR2);
+        printf("[KASJER] Ewakuacja, PID fryzjera powiadomionego: %d\n", fryzjerzy_pid[i]);
+    } // Ewakuują klienta tylko fryzjerzy, którzy go mają w danym momencie
+
+    printf("[KASJER] Ewakuuję poczekalnię!\n");
     kill(serwer_poczekalnia_pid, SIGUSR2);
 
-    
-        // PĘTLA WYZNACZAJĄCA CZAS DZIAŁANIA SALONU
+    // PĘTLA WYZNACZAJĄCA CZAS DZIAŁANIA SALONU
     // czas w sekundach 'n' jako argument: ./KASJER n
 
     time_t start_time, current_time;
-     
+
     time(&start_time);
 
     do

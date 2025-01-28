@@ -60,7 +60,6 @@ int main(void)
                 // exit(1);
             }
             // printf("[FRYZJER] wysłał PID fryzjera %d kol. kom.\n", fryzjer_pid);
-
             break;
         }
     }

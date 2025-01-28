@@ -86,7 +86,7 @@ int main(void)
      {
           srand((my_pid + a));
 
-          // należy zasymulować losowy czas między zapytniami od poczekalni
+          // należy zasymulować losowy czas między zapytaniami od poczekalni
 
           czas_miedzy_zapytaniami = (rand() % 10);
 
@@ -185,8 +185,6 @@ int main(void)
                               //printf("[ klient ] 50 zl *:%d\n",wydanie_reszty.banknoty[0]);
                               //printf("[ klient ] 20 zl *:%d\n",wydanie_reszty.banknoty[1]);
                               //printf("[ klient ] 10 zl *:%d\n",wydanie_reszty.banknoty[2]);
-
-                              // NALEŻY DODAĆ RESZTĘ DO PORTFELU KLIENTA
                          }    
                     }
                }
