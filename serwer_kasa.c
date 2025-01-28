@@ -118,7 +118,7 @@ int main(void)
 
   int reszta_z_watku = 0;
 
-  while (transakcje < LICZBA_TRANSAKCJI)
+  while (transakcje < LICZBA_TRANSAKCJI && keep_running == 1)
   {
 
     int sprawdzam_kolejke = 0;

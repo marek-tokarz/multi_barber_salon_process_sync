@@ -4,6 +4,8 @@
 
 volatile sig_atomic_t keep_running = 1;
 
+volatile sig_atomic_t sigusr2_received = 0;
+
 void handle_sigusr1(int signum)
 {
     if (signum == SIGUSR1)
@@ -12,8 +14,6 @@ void handle_sigusr1(int signum)
         printf("[ poczekalnia ]: Otrzymano sygnał SIGUSR1 - KONIEC PĘTLI\n");
     }
 }
-
-/*
 
 // DO EWAKUACJI KLIENTÓW
 
@@ -25,28 +25,16 @@ void handle_sigusr2(int signum)
 {
     if (signum == SIGUSR2)
     {
-        printf("[ poczekalnia ] sygnał SIGUSR2, ewakuacja klientów!.\n");
-
-        waitSemafor(semID_shm, 0, SEM_UNDO);
-
-        for (int i = 0; i < shm->counter; i++)
-        {
-            // printf("Poczekalnia: Wysyłam SIGKILL do procesu PID %d\n", shm->pids[i]);
-            kill(shm->pids[i], SIGKILL);
-        }
-
-        shm->counter = 0;
-        signalSemafor(semID_shm, 0);
+        sigusr2_received = 1;
+        printf("[ poczekalnia ]: Otrzymano sygnał SIGUSR2 \n");
     }
 }
 
-*/
-
 int main()
 {
-    int OBIEGI_PĘTLI_SPRAWDZANIA = 1000000;
+    int OBIEGI_PĘTLI_SPRAWDZANIA = 10000000;
 
-     // blokowanie sygnałów, by odebrać je w pożądanym momencie:
+    // blokowanie sygnałów, by odebrać je w pożądanym momencie:
 
     sigset_t block_mask, old_mask;
 
@@ -64,17 +52,25 @@ int main()
 
     // ODBIÓR SIGUSR1 i/lub SIGUSR2
 
-    // Rejestracja handlera dla sygnału SIGUSR1
+    // SIGUSR1
     struct sigaction sa_sigusr1;
     sa_sigusr1.sa_handler = handle_sigusr1;
     sigemptyset(&sa_sigusr1.sa_mask);
     sa_sigusr1.sa_flags = SA_RESTART;
     sigaction(SIGUSR1, &sa_sigusr1, NULL);
 
+    // SIGUSR2
+
+    struct sigaction sa_sigusr2;
+    sa_sigusr2.sa_handler = handle_sigusr2;
+    sigemptyset(&sa_sigusr2.sa_mask);
+    sa_sigusr2.sa_flags = 0;
+    sigaction(SIGUSR2, &sa_sigusr2, NULL);
+
     // SEMAFOR GLOBALNY
 
     int semID_glob; // numer semafora globalnego
-   
+
     semID_glob = alokujSemafor(KEY_GLOB_SEM, N, IPC_CREAT | 0666); // dostęp do semafora globalnego
 
     int semID_shm; // numer semafora pamięci współdzielonej
@@ -104,7 +100,7 @@ int main()
     }
 
     // POCZEKALNIA PRZED PRZYBYCIEM KLIENTÓW
-    
+
     waitSemafor(semID_shm, 0, SEM_UNDO);
     shm->counter = 0;
     printf("[ poczekalnia ] przed obsługą: Liczba zapisanych PID-ów: %d\n", shm->counter);
@@ -115,9 +111,8 @@ int main()
     }
     printf("\n");
     signalSemafor(semID_shm, 0);
-    
 
-    // UZYSKIWANIE DOSTĘPU DO KOLEJKI KOMUNIKATÓW 
+    // UZYSKIWANIE DOSTĘPU DO KOLEJKI KOMUNIKATÓW
     // KOLEJKA KOMUNIKATÓW: klient <-> poczekalnia
 
     int msqid;
@@ -132,14 +127,14 @@ int main()
         exit(1);
     }
 
-    int odebrane_komunikaty = 0;            // DO PRZERWANIA PĘTLI SERWERA
+    int odebrane_komunikaty = 0; // DO PRZERWANIA PĘTLI SERWERA
     int liczba_prob_odbioru = 0; // DO PRZERWANIA PĘTLI SERWERA
     // liczba prób odbioru ma zapobiec zamknięci pętli gdy akurat kolejka
     // przypadkowo była pusta, bo klienci nic nie wysłali
     int liczba_przyjętych_do_poczekalni = 0;
 
     int podniesiono_semafor_globalny_nr_1 = 0;
-    while(podniesiono_semafor_globalny_nr_1 == 0)
+    while (podniesiono_semafor_globalny_nr_1 == 0)
     {
         if (msgctl(msqid, IPC_STAT, &buf_info) == -1) // sprawdzanie stanu kolejki
         {
@@ -149,12 +144,12 @@ int main()
 
         if (buf_info.msg_qnum > 1) // sprawdzenie kolejki - w szczególności ilość kom.
         {
-            signalSemafor(semID_glob, 1); // PODNIEŚ SEMAFOR 1 - dla fryzjerów
+            signalSemafor(semID_glob, 1);          // PODNIEŚ SEMAFOR 1 - dla fryzjerów
             podniesiono_semafor_globalny_nr_1 = 1; // ZAKOŃCZ PĘTLĘ
         }
     }
 
-    while (liczba_prob_odbioru < OBIEGI_PĘTLI_SPRAWDZANIA) // pętla odbioru komunikatów
+    while (liczba_prob_odbioru < OBIEGI_PĘTLI_SPRAWDZANIA && keep_running == 1) // pętla odbioru komunikatów
     {
 
         // flaga IPC_NOWAIT, aby msgrcv nie zatrzymało pętli serwera
@@ -217,13 +212,48 @@ int main()
 
         signalSemafor(semID_shm, 0);
 
-        // na obecną chwilę poczekalnia zapisuje te same PIDy do
-        // pamięci współdzielonej
-        // potrzeba albo mechanizmu który to blokuje
-        // albo logika procesu klienta uniemożliwi wysyłanie kolejnego komunikatu
-        // jeśli już jest w kolejce w poczekalni
+        // Odblokuj sygnały SIGUSR1 i SIGUSR2, używając starej maski
+        if (sigprocmask(SIG_SETMASK, &old_mask, NULL) == -1)
+        {
+            perror("sigprocmask (unblocking)");
+            return 1;
+        }
 
-        // usleep(10); // częstotliwość odbierania komunikatów
+        // PONOWNIE ZABLOKUJ SYGNAŁY
+
+        // Utwórz maskę i dodaj SIGUSR1 i SIGUSR2
+        sigemptyset(&block_mask);
+        sigaddset(&block_mask, SIGUSR1);
+        sigaddset(&block_mask, SIGUSR2);
+
+        // Zablokuj sygnały
+        if (sigprocmask(SIG_BLOCK, &block_mask, &old_mask) == -1)
+        {
+            perror("sigprocmask (blocking)");
+            return 1;
+        }
+
+        if (sigusr2_received == 1)
+        {
+            printf("[ poczekalnia ] Ewakuacja klientów!\n");
+
+            int PID;
+
+            int licznik = shm->counter;
+
+            printf("[ poczekalnia ] ilość ewakuowanych: %d\n",licznik);
+
+            for (int i = 0; i < licznik; i++)
+            {
+                PID = shm->pids[i];
+                printf("%d Poczekalnia: usuwam PID %d\n", i ,PID);
+                shm->pids[i] = 0;
+            }
+
+            shm->counter = 0;
+        }
+
+        sigusr2_received = 0;
 
         /*  RACZEJ ZBĘDNĘ, PĘTLĘ KOŃCZY ZMIENNA: liczba_prob_odbioru_nieudanego
         if (msgctl(msqid, IPC_STAT, &buf_info) == -1) // sprawdzanie stanu kolejki
@@ -239,30 +269,7 @@ int main()
         }
         */
 
-       liczba_prob_odbioru++;
-       // printf(liczba_prob_odbioru)
-
-
-        // Odblokuj sygnały SIGUSR1 i SIGUSR2, używając starej maski
-        if (sigprocmask(SIG_SETMASK, &old_mask, NULL) == -1)
-        {
-            perror("sigprocmask (unblocking)");
-            return 1;
-        }
-
-        // PONOWNIE ZABLOKUJ SYGNAŁY
-
-        // Utwórz maskę i dodaj SIGUSR1 i SIGUSR2
-        sigemptyset(&block_mask);
-        sigaddset(&block_mask, SIGUSR1);
-        sigaddset(&block_mask, SIGUSR2);
-
-        // Zablokuj sygnały od samego początku, zachowując poprzednią maskę
-        if (sigprocmask(SIG_BLOCK, &block_mask, &old_mask) == -1)
-        {
-            perror("sigprocmask (blocking)");
-            return 1;
-        }
+        liczba_prob_odbioru++;
     }
 
     printf("\n[ poczekalnia ] liczba przyjętych : %d\n", liczba_przyjętych_do_poczekalni);

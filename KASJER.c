@@ -5,13 +5,14 @@ int main(int argc, char *argv[])
 
     // CZAS OTWARCIA JAKO ARGUMENT
 
+    int seconds = atoi(argv[1]);
+
     if (argc != 2)
     {
         fprintf(stderr, "Użycie: %s <ilość_sekund>\n", argv[0]);
+        
         exit(1);
     }
-
-    int seconds = atoi(argv[1]);
 
     // KOLEJKA KOMUNIKATÓW DO OBSŁUGI SYGNAŁÓW
 
@@ -169,11 +170,17 @@ int main(int argc, char *argv[])
     }
     */
 
-    // PĘTLA WYZNACZAJĄCA CZAS DZIAŁANIA SALONU
+    
+
+    printf("[KASJER] ewakuuję poczekalnię\n");
+    kill(serwer_poczekalnia_pid, SIGUSR2);
+
+    
+        // PĘTLA WYZNACZAJĄCA CZAS DZIAŁANIA SALONU
     // czas w sekundach 'n' jako argument: ./KASJER n
 
     time_t start_time, current_time;
-
+     
     time(&start_time);
 
     do

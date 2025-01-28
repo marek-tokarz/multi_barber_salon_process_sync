@@ -1,4 +1,9 @@
-#include "header_file.h"
+#include <semaphore.h>
+#include <stdio.h>
+#include <unistd.h>
+#include <stdlib.h>
+#include <sys/sem.h>
+#include <errno.h>
 
 // TWORZENIE SEMAFORA
 int alokujSemafor(key_t klucz, int number, int flagi)
@@ -15,7 +20,6 @@ int alokujSemafor(key_t klucz, int number, int flagi)
 // WSTAWIANIE ZER - WSTĘPNE OPUSZCZENIE SEMAFORA
 void inicjalizujSemafor(int semID, int number, int val)
 {
-   
    if ( semctl(semID, number, SETVAL, val) == -1 )
    {
       perror("Blad semctl (inicjalizujSemafor): ");
@@ -29,12 +33,13 @@ int waitSemafor(int semID, int number, int flags)
    struct sembuf operacje[1];
    operacje[0].sem_num = number;
    operacje[0].sem_op = -1;
-   operacje[0].sem_flg = 0 | flags;//SEM_UNDO;
+   operacje[0].sem_flg = SEM_UNDO;
    
    if ( semop(semID, operacje, 1) == -1 )
    {
       perror("Blad semop (waitSemafor)");
-      return -1;
+      fprintf(stderr, "errno: %d\n", errno);
+      // return -1;
    }
    
    return 1;

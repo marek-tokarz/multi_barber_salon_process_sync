@@ -117,7 +117,7 @@ int main(void)
 
     int liczba_zabranych_z_poczekalni = 0;
 
-    while (liczba_prob_sprawdzenia_poczekalni < 1000000 && keep_running == 1) // pętla odbioru komunikatów
+    while (liczba_prob_sprawdzenia_poczekalni < 100000 && keep_running == 1) // pętla odbioru komunikatów
     {
         waitSemafor(semID_shm, 0, SEM_UNDO); // CZEKAJ NA SEMAFORZE 0
 
@@ -131,8 +131,9 @@ int main(void)
             if (pid_klienta > 0)
             {
 
+                int ilosc_klientow = (shm->counter);
                 // Przesuń pozostałe PID-y o jedno miejsce do przodu
-                for (int i = 0; i < shm->counter - 1; i++)
+                for (int i = 0; i < ilosc_klientow; i++)
                 {
                     shm->pids[i] = shm->pids[i + 1];
                 }
